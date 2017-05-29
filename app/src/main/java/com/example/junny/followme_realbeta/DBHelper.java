@@ -31,7 +31,7 @@ public class DBHelper extends SQLiteOpenHelper {
     }
     public void createTable(){
         SQLiteDatabase db=getWritableDatabase();
-        String sql="create table history(num integer primary key autoincrement, title text, newAddress text);";
+        String sql="create table history(num integer primary key autoincrement, title text, newAddress text, latitude text, longitude text);";
         db.execSQL(sql);
     }
     public void insert(String title, String newAddress, String latitude, String longitude){

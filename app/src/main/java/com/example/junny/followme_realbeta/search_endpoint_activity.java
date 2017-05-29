@@ -1,6 +1,7 @@
 package com.example.junny.followme_realbeta;
 
 import android.app.Activity;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -40,19 +41,31 @@ public class search_endpoint_activity extends Activity {
     private DBHelper dbHelper;
     private LinearLayout delete_record;
     private TextView top_bar;
+    private SharedPreferences pref;
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         setContentView(R.layout.search_endpoint);
 
+        //디비 헬퍼 객체 생성, 이를 통해 로컬 디비 관리, 스태틱 메모리에 할당 액티비티 간 공유
         if(staticValues.dbHelper==null){
             staticValues.dbHelper=new DBHelper(getApplicationContext(), "history", null, version);
-//            String drop_sql="drop table history";
-//            dbHelper.getWritableDatabase().execSQL(drop_sql);
-//            staticValues.dbHelper.createTable();
         }
         this.dbHelper=staticValues.dbHelper;
+
+        //셰어드 프리퍼런스 사용, 로컬 디비 생성되었는지 확인, 생성 안되어있으면 생성하고, 셰어드 값 변경
+        pref=getSharedPreferences("pref", MODE_PRIVATE);
+
+        if(pref.getString("localdb_ini","").equals("")){
+            dbHelper.createTable();
+            SharedPreferences.Editor editor =pref.edit();
+            editor.putString("localdb_ini","initialized");
+            editor.commit();
+        }
+        else{
+            Log.e("셰어드 인식","11");
+        }
 
         delete_record=(LinearLayout)findViewById(R.id.delete_record);
         top_bar=(TextView)findViewById(R.id.top_bar);

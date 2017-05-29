@@ -114,11 +114,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         mLastLocation=LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if(mLastLocation!=null){
-            Log.e("현재 위치 호출","온커넥트에서");
-            set_currentlocation();
+            Log.e("위치 잘 받아옴","온커넥트");
+            Log.e("받아온 경도", Double.toString(mLastLocation.getLatitude()));
+            Log.e("받아온 위도", Double.toString(mLastLocation.getLongitude()));
+
+            //일단 스태틱에 위치 저장, 이게 불필요한지 확인해서 제거할 것
+            staticValues.mLastLat=mLastLocation.getLatitude();
+            staticValues.mLastLong=mLastLocation.getLongitude();
+
+            LatLng cur_location=new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+            Log.e("mMap검사", mMap.toString());
+            mMap.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
+
+            try{
+                List<Address> addresses= geocoder.getFromLocation(staticValues.mLastLat, staticValues.mLastLong,4);
+                String str_address=addresses.get(0).getAddressLine(0);
+                str_address=str_address.replaceFirst("대한민국","");
+                str_address=str_address.replaceFirst("특별시","");
+                staticValues.cur_address=str_address;
+                start_point.setText(str_address);
+            }
+            catch(IOException e){
+                Log.e("IO 예외 뜨심","!!");
+            }
         }
        else{
-            Toast.makeText(MapsActivity.this,"현재 위치를 잡지 못했습니다\n잠시 뒤에 새로고침을 눌러주세요",Toast.LENGTH_LONG).show();
+            Log.e("위치 못잡음","얘 정신 못차린다");
             LatLng seoul=new LatLng(37.5665, 126.9780);
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(seoul,10));
         }
