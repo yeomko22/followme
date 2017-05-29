@@ -1,10 +1,11 @@
 package com.example.junny.followme_realbeta;
 
-import android.app.Activity;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v4.app.FragmentActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -15,6 +16,13 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.places.AutocompleteFilter;
+import com.google.android.gms.location.places.Places;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -30,7 +38,7 @@ import java.util.ArrayList;
 
 import static android.R.attr.version;
 
-public class search_endpoint_activity extends Activity {
+public class search_endpoint_activity extends FragmentActivity implements GoogleApiClient.OnConnectionFailedListener {
     private RecyclerView recyclerView;
     private EditText search_window;
     private HttpURLConnection conn;
@@ -42,11 +50,22 @@ public class search_endpoint_activity extends Activity {
     private LinearLayout delete_record;
     private TextView top_bar;
     private SharedPreferences pref;
+    private GoogleApiClient mGoogleApiClient;
+    private LatLng northeast;
+    private LatLng southwest;
+    private LatLngBounds korea_bounds;
+    private AutocompleteFilter filter;
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
         super.onCreate(savedInstanceState);
         setContentView(R.layout.search_endpoint);
+
 
         //디비 헬퍼 객체 생성, 이를 통해 로컬 디비 관리, 스태틱 메모리에 할당 액티비티 간 공유
         if(staticValues.dbHelper==null){
@@ -80,8 +99,27 @@ public class search_endpoint_activity extends Activity {
         recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
 
+        northeast=new LatLng(39.5562517,131.6064755);
+        southwest=new LatLng(32.5668292,125.2783505);
+        korea_bounds=new LatLngBounds(southwest, northeast);
+        filter=new AutocompleteFilter.Builder().setTypeFilter(AutocompleteFilter.TYPE_FILTER_NONE).build();
+
         initData();
     }
+
+    @Override
+    protected void onResume() {
+        if(mGoogleApiClient==null){
+            mGoogleApiClient=new GoogleApiClient
+                    .Builder(this)
+                    .addApi(Places.GEO_DATA_API)
+                    .addApi(Places.PLACE_DETECTION_API)
+                    .enableAutoManage(this,this)
+                    .build();
+        }
+        super.onResume();
+    }
+
     private void setHistory(){
         ArrayList<search_item> sample=new ArrayList<search_item>();
         Cursor cursor=dbHelper.select_reverse();
@@ -154,9 +192,31 @@ public class search_endpoint_activity extends Activity {
                         @Override
                         public void run() {
                             try{
+//                                구글 자동완성 요청, 웹과 마찬가지로 다섯개까지 밖에는 제공하지 않는다
+//                                Log.e("1", "1");
+//                                PendingResult<AutocompletePredictionBuffer> result
+//                                        =Places.GeoDataApi.getAutocompletePredictions(mGoogleApiClient, cur_text, korea_bounds, filter);
+//                                result.then(new ResultTransform<AutocompletePredictionBuffer, Result>() {
+//                                    @Nullable
+//                                    @Override
+//                                    public PendingResult<Result> onSuccess(@NonNull AutocompletePredictionBuffer autocompletePredictions) {
+//                                        Log.e("결과 개수", Integer.toString(autocompletePredictions.getCount()));
+//                                        for(int i=0;i<autocompletePredictions.getCount();i++){
+//                                            String a=autocompletePredictions.get(i).getPrimaryText(new CharacterStyle() {
+//                                                @Override
+//                                                public void updateDrawState(TextPaint tp) {
+//
+//                                                }
+//                                            }).toString();
+//                                            Log.e("검색 결과 값", a);
+//                                        }
+//                                        return null;
+//                                    }
+//                                });
+
 
                                 //다음 로컬 api를 사용https://apis.daum.net/local/v1/search/keyword.json?apikey=5a3b393c51ad7571d6a92599bd57a77e&query=%ED%99%8D%EB%8C%80
-                                String str_url="https://apis.daum.net/local/v1/search/keyword.json?apikey=00b029ef729c6020abe2c0fe859eb77f&sort=1&query="+URLEncoder.encode(cur_text,"UTF-8");
+                                String str_url="https://apis.daum.net/local/v1/search/keyword.json?apikey=00b029ef729c6020abe2c0fe859eb77f&sort=1&query="+ URLEncoder.encode(cur_text,"UTF-8");
 
                                 URL url=new URL(str_url);
 

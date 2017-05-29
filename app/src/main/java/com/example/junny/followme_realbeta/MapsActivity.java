@@ -14,7 +14,6 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -159,41 +158,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Intent go_search = new Intent(getApplicationContext(), search_endpoint_activity.class);
         go_search.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
         startActivity(go_search);
-    }
-    public void set_currentlocation(){
-        if(ContextCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},0);
-        }
-        mLastLocation=LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);//이걸 못 받아온다
-        //안될리가 없다 내가 못할 뿐
-
-        if(mLastLocation!=null){
-            Log.e("위치 잘 받아옴","11");
-            Log.e("받아온 경도", Double.toString(mLastLocation.getLatitude()));
-            Log.e("받아온 위도", Double.toString(mLastLocation.getLongitude()));
-            staticValues.mLastLat=mLastLocation.getLatitude();
-            staticValues.mLastLong=mLastLocation.getLongitude();
-            LatLng cur_location=new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-            Log.e("mMap검사", mMap.toString());
-            mMap.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
-
-            try{
-                List<Address> addresses= geocoder.getFromLocation(staticValues.mLastLat, staticValues.mLastLong,4);
-                String str_address=addresses.get(0).getAddressLine(0);
-                str_address=str_address.replaceFirst("대한민국","");
-                str_address=str_address.replaceFirst("특별시","");
-                staticValues.cur_address=str_address;
-                start_point.setText(str_address);
-            }
-            catch(IOException e){
-                Log.e("IO 예외 뜨심","!!");
-            }
-        }
-        else{
-            Toast.makeText(MapsActivity.this, "잠시 뒤에 새로고침을 눌러주세요", Toast.LENGTH_LONG).show();
-            Log.e("되야만해 이거뜨면 안대","11");
-        }
     }
 
     public void reset_curlocation(View v){
