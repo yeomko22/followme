@@ -1,0 +1,52 @@
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:map="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_height="80dp"
+    android:layout_width="match_parent"
+    android:background="@color/light_grey"
+    android:paddingBottom="1dp"
+    >
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/white"
+        android:paddingLeft="30dp"
+        android:paddingRight="10dp"
+        android:weightSum="10"
+        android:orientation="vertical">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="6"
+            android:weightSum="10">
+            <TextView
+                android:id="@+id/data_title"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_weight="9"
+                android:textSize="18dp"
+                android:textColor="@color/black"
+                android:gravity="center_vertical"
+                android:text="정보 들어가기 전" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical|center_horizontal">
+            </LinearLayout>
+
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/data_newAddress"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="4"
+            android:gravity="center_vertical"
+            android:text="정보 들어가기 전" />
+    </LinearLayout>
+</LinearLayout>
+
