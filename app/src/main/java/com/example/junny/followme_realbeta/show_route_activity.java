@@ -19,8 +19,10 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.skp.Tmap.TMapData;
+import com.skp.Tmap.TMapPoint;
+import com.skp.Tmap.TMapPolyLine;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -50,6 +52,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     private String cur_mode="bus";
     private FragmentManager fm;
     private HttpURLConnection conn;
+    private String title;
     private String latitude;
     private String longitude;
     private GoogleMap show_Map;
@@ -57,6 +60,10 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     private LatLng cur_location;
     private LatLng destination;
     private LatLng middle_point;
+    private TMapData tMapData;
+    private TMapPoint tMap_start;
+    private TMapPoint tMap_end;
+    private PolylineOptions walkOptions;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,15 +83,20 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
         Intent intent=getIntent();
         latitude=intent.getStringExtra("latitude");
         longitude=intent.getStringExtra("longitude");
-        String title=intent.getStringExtra("title");
+        title=intent.getStringExtra("title");
 
         mHandler=new Handler();
         cur_location=new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+        tMap_start=new TMapPoint(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+
         destination=new LatLng(Double.parseDouble(latitude),Double.parseDouble(longitude));
+        tMap_end=new TMapPoint(Double.parseDouble(latitude),Double.parseDouble(longitude));
+
         middle_point=new LatLng(((mLastLocation.getLatitude()+Double.parseDouble(latitude))/(double)2),((mLastLocation.getLongitude()+Double.parseDouble(longitude))/(double)2));
 
         SupportMapFragment showmapFragment=(SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.show_map);
         showmapFragment.getMapAsync(this);
+        tMapData=new TMapData();
 
 
         if (staticValues.cur_address.length()>8){
@@ -190,7 +202,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                 for(int i=0;i<polylines.size();i++){
                                     rectOptions.add(polylines.get(i));
                                 }
-                                Polyline polyline = show_Map.addPolyline(rectOptions);
+                                show_Map.addPolyline(rectOptions);
                             }
                             catch (Exception e){
                                 StringWriter sw = new StringWriter();
@@ -218,6 +230,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
             }
         });
     }
+    //구글 폴리라인 인코딩 해석기, 점들의 리스트를 리턴해준다
     private List<LatLng> decodePoly(String encoded) {
 
         List<LatLng> poly = new ArrayList<LatLng>();
@@ -248,84 +261,84 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     (((double) lng / 1E5)));
             poly.add(p);
         }
-
         return poly;
     }
 
 
-
-
-
-    public void getWalk(){
+    public void getWalk() {
         bottom_type.setText("도보");
+        //티맵 데이터 객체로 경로를 요청, 날라온 폴리라인을 분해해서 이걸로 다시 구글 폴리라인을 생성, 상당히 번거롭다
+        //아래는 지오 제이썬 객체로 도보 경로를 받아온 것, 여기의 좌표로 폴리라인을 그릴 수 있다면 충분함 그걸로 대체하는 방향으로 가자
+        tMapData.findPathDataWithType(TMapData.TMapPathType.PEDESTRIAN_PATH, tMap_start, tMap_end, new TMapData.FindPathDataListenerCallback() {
+            @Override
+            public void onFindPathData(TMapPolyLine tMapPolyLine) {
+                ArrayList<TMapPoint> tmap_poly = tMapPolyLine.getLinePoint();
+                ArrayList<LatLng> google_poly = new ArrayList<LatLng>();
+                walkOptions = new PolylineOptions();
+                for (int i = 0; i < tmap_poly.size(); i++) {
+                    TMapPoint cur_tpoint = tmap_poly.get(i);
+                    walkOptions.add(new LatLng(cur_tpoint.getLatitude(), cur_tpoint.getLongitude()));
+                }
+                AsyncTask.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                show_Map.clear();
+                                show_Map.addPolyline(walkOptions);
+                            }
+                        });
+                    }
+                });
+            }
+        });
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {
-                try{
+                try {
+                    //도보 경로 티맵 geoJSON 받아오는 유알엘, 리퀘스트 코드 타입과 리스본스 코드 타입을 조심할 것, 경도 위도가 일반적인 순서와 다르다
+                    String tes_url="https://apis.skplanetx.com/tmap/routes/pedestrian?version=1&startX="+staticValues.mLastLong+"&startY="+staticValues.mLastLat+"&endX="+longitude+"&endY="+latitude+"&startName=start&endName=end&reqCoordType=WGS84GEO&resCoordType=WGS84GEO&appKey=4004a4c7-8e67-3c17-88d9-9799c613ecc7";
+                    URL url = new URL(tes_url);
 
-                    //다음 로컬 api를 사용https://apis.daum.net/local/v1/search/keyword.json?apikey=5a3b393c51ad7571d6a92599bd57a77e&query=%ED%99%8D%EB%8C%80
-                    String str_url="https://apis.skplanetx.com/tmap/routes/pedestrian?version=1&callback=walk_back&startX="+
-                            staticValues.mLastLat+"&startY="+staticValues.mLastLong+"&endX="+latitude+"&endY="+longitude+"startName=start&endName=end";
-
-                    URL url=new URL(str_url);
-
-                    conn=(HttpURLConnection)url.openConnection();
-                    conn.setRequestMethod("POST");
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
                     conn.setDoInput(true);
                     conn.setDoOutput(true);
                     conn.setConnectTimeout(1000);
                     conn.connect();
 
-                    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(),"UTF-8"));
-                    StringBuilder sb=new StringBuilder();
-                    String line=null;
-                    while((line=br.readLine())!=null){
-                        sb.append(line);
+                    if(conn.getResponseCode()==200){
+                        Log.e("성공",tes_url);
+                        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                        StringBuilder sb = new StringBuilder();
+                        String line = null;
+                        while ((line = br.readLine()) != null) {
+                            sb.append(line);
+                        }
                     }
-                    Log.e("넘어온 제이썬",sb.toString());
-//                    String jsonString=sb.toString();
-//                    JSONObject totalObject=new JSONObject(jsonString);
-//                    JSONArray routeArray=new JSONArray(totalObject.getString("routes"));
-//                    Log.e("경로 개수", Integer.toString(routeArray.length()));
-//                    JSONObject routeObject=routeArray.getJSONObject(0);
-//                    JSONArray legs=new JSONArray(routeObject.getString("legs"));
-//                    final JSONObject legsObject=legs.getJSONObject(0);
-//                    JSONArray steps=new JSONArray(legsObject.getString("steps"));
-//                    for(int i=0;i<steps.length();i++){
-//                        Log.e("스텝", steps.getJSONObject(i).getString("html_instructions"));
-//                    }
+                    else{
+                        Log.e("유알엘",tes_url);
+                        Log.e("실패코드", Integer.toString(conn.getResponseCode()));
+                        Log.e("실패코드", conn.getResponseMessage());
+                    }
 
                     mHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            try{
-//                                JSONObject distance_obj=new JSONObject(legsObject.getString("distance"));
-//                                bottom_distance.setText(distance_obj.getString("text"));
-//                                JSONObject time_obj=new JSONObject(legsObject.getString("duration"));
-//                                bottom_time.setText(time_obj.getString("text"));
-                            }
-                            catch (Exception e){
+                            try {
+
+                            } catch (Exception e) {
                                 StringWriter sw = new StringWriter();
                                 e.printStackTrace(new PrintWriter(sw));
                                 String exceptionAsStrting = sw.toString();
                                 Log.e("예외발생", exceptionAsStrting);
                             }
-
                             return;
                         }
                     });
-                }
-                catch(Exception e){
-                    StringWriter sw = new StringWriter();
-                    e.printStackTrace(new PrintWriter(sw));
-                    String exceptionAsStrting = sw.toString();
-                    Log.e("예외발생", exceptionAsStrting);
-                }
-                finally {
-                    if(conn!=null){
-                        conn.disconnect();
-                    }
-                    return;
+                } catch (Exception e) {
+
                 }
             }
         });
