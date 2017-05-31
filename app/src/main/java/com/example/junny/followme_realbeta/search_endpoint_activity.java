@@ -125,11 +125,6 @@ public class search_endpoint_activity extends FragmentActivity implements Google
         Cursor cursor=dbHelper.select_reverse();
 
         while(cursor.moveToNext()){
-            Log.e("디비 0", cursor.getString(0));
-            Log.e("디비 1", cursor.getString(1));
-            Log.e("디비 2", cursor.getString(2));
-            Log.e("디비 3", cursor.getString(3));
-            Log.e("디비 4", cursor.getString(4));
             sample.add(new search_item("item",cursor.getString(1),cursor.getString(2),cursor.getString(3),cursor.getString(4)));
         }
 

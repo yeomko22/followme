@@ -10,4 +10,15 @@
     <color name="light_light_grey">#eff2f7</color>
     <color name="dark_background">#3b62a0</color>
     <color name="green">#7ae286</color>
+    <color name="line_center">#72C7A6</color>
+    <color name="line_bundang">#E0A134</color>
+    <color name="line_1">#00498B</color>
+    <color name="line_2">#009246</color>
+    <color name="line_3">#F36630</color>
+    <color name="line_4">#00A2D1</color>
+    <color name="line_5">#5940FF</color>
+    <color name="line_6">#CC660D</color>
+    <color name="line_7">#4D8000</color>
+    <color name="line_8">#FF33A6</color>
+    <color name="line_9">#A17E46</color>
 </resources>

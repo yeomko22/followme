@@ -1,12 +1,15 @@
 package com.example.junny.followme_realbeta;
 
 import android.app.FragmentManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -64,11 +67,17 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     private TMapPoint tMap_start;
     private TMapPoint tMap_end;
     private PolylineOptions walkOptions;
+    private Resources res;
+    private String last_stop;
+    private JSONArray features;
+    private boolean contain_transit;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.show_route_activity);
+
+        res=getResources();
 
         start_point_view=(TextView)findViewById(R.id.start_point);
         end_point_view=(TextView)findViewById(R.id.end_point);
@@ -116,10 +125,6 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     public void onMapReady(GoogleMap googleMap) {
         Log.e("지도 준비됬다","11");
         show_Map = googleMap;
-
-        show_Map.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
-        show_Map.addMarker(new MarkerOptions().position(destination).title("목표지점"));
-
         show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,12));
         // Add a marker in Sydney and move the camera
     }
@@ -129,25 +134,27 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                 if(cur_mode.equals("bus")){
                     break;
                 }
-                bus_image.setImageResource(R.drawable.bus_active);
-                walk_image.setImageResource(R.drawable.walk_passive);
-                cur_mode="bus";
+
                 getTransit();
                 break;
             case R.id.transport_walk :
                 if(cur_mode.equals("walk")){
                     break;
                 }
-                bus_image.setImageResource(R.drawable.bus_passive);
-                walk_image.setImageResource(R.drawable.walk_active);
-                cur_mode="walk";
                 getWalk();
                 break;
         }
 
     }
     public void getTransit(){
+        bus_image.setImageResource(R.drawable.bus_active);
+        walk_image.setImageResource(R.drawable.walk_passive);
+        cur_mode="bus";
         bottom_type.setText("대중교통");
+        if(show_Map!=null){
+            show_Map.clear();
+        }
+
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {
@@ -157,7 +164,6 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     String str_url="https://maps.googleapis.com/maps/api/directions/json?origin="+
                             staticValues.mLastLat+","+staticValues.mLastLong+"&destination="+latitude+","+longitude+
                             "&mode=transit&language=ko&key=AIzaSyBAy4VmTHyOCI1e_XvXwRlNn7pqwKU0t7o";
-
                     URL url=new URL(str_url);
 
                     conn=(HttpURLConnection)url.openConnection();
@@ -176,7 +182,6 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     String jsonString=sb.toString();
                     JSONObject totalObject=new JSONObject(jsonString);
                     JSONArray routeArray=new JSONArray(totalObject.getString("routes"));
-                    Log.e("경로 개수", Integer.toString(routeArray.length()));
                     JSONObject routeObject=routeArray.getJSONObject(0);
                     JSONArray legs=new JSONArray(routeObject.getString("legs"));
                     JSONObject overview_poly=new JSONObject(routeObject.getString("overview_polyline"));
@@ -185,14 +190,38 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
 
                     final JSONObject legsObject=legs.getJSONObject(0);
                     JSONArray steps=new JSONArray(legsObject.getString("steps"));
+                    int walk_time=0;
+                    final ArrayList<String> line_num_list=new ArrayList<String>();
+                    final ArrayList<String> line_name_list=new ArrayList<String>();
+                    contain_transit=false;
                     for(int i=0;i<steps.length();i++){
-                        Log.e("스텝", steps.getJSONObject(i).getString("html_instructions"));
+                        JSONObject step_detail=steps.getJSONObject(i);
+                        if(step_detail.getString("travel_mode").equals("TRANSIT")){
+                            contain_transit=true;
+                            JSONObject transit_detail=step_detail.getJSONObject("transit_details");
+                            String org_name=new JSONObject(transit_detail.getString("line")).getString("short_name");
+                            Log.e("타입",org_name);
+                            line_num_list.add(org_name.substring(0,1));
+
+                            String org_dep=new JSONObject(transit_detail.getString("departure_stop")).getString("name");
+                            line_name_list.add(org_dep.split(" ")[0]);
+
+                            last_stop=new JSONObject(transit_detail.getString("arrival_stop")).getString("name");
+                        }
+                        else{
+                            walk_time+=Integer.parseInt(new JSONObject(step_detail.getString("duration")).getString("value"));
+                        }
                     }
 
                     mHandler.post(new Runnable() {
                         @Override
                         public void run() {
                             try{
+                                if(!contain_transit){
+                                    Toast.makeText(show_route_activity.this,"가까운 거리는 도보 경로를 이용해주세요", Toast.LENGTH_LONG).show();
+                                    getWalk();
+                                    return;
+                                }
                                 JSONObject distance_obj=new JSONObject(legsObject.getString("distance"));
                                 bottom_distance.setText(distance_obj.getString("text"));
                                 JSONObject time_obj=new JSONObject(legsObject.getString("duration"));
@@ -202,6 +231,51 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                 for(int i=0;i<polylines.size();i++){
                                     rectOptions.add(polylines.get(i));
                                 }
+                                LayoutInflater inflater=(LayoutInflater)show_route_activity.this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                                for(int i=0;i<line_num_list.size();i++){
+                                    LinearLayout added_item=(LinearLayout) inflater.inflate(R.layout.line_background,null);
+                                    ((TextView) added_item.findViewById(R.id.num)).setText(line_num_list.get(i));
+                                    ((TextView) added_item.findViewById(R.id.name)).setText(line_name_list.get(i));
+                                    switch (line_num_list.get(i)){
+                                        case "1":
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_1));
+                                            break;
+                                        case "2":
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_2));
+                                            break;
+                                        case "3":
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_3));
+                                            break;
+                                        case "4":
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_4));
+                                            break;
+                                        case "5":
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_5));
+                                            break;
+                                        case "6":
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_6));
+                                            break;
+                                        case "7":
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_7));
+                                            break;
+                                        case "8":
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_8));
+                                            break;
+                                        case "9":
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_9));
+                                            break;
+                                        default:
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_9));
+                                            break;
+                                    }
+                                    bottom_container.addView(added_item);
+                                }
+                                LinearLayout last_point=(LinearLayout) inflater.inflate(R.layout.line_end,null);
+                                ((TextView)(last_point.findViewById(R.id.last_name))).setText(last_stop+" 하차");
+                                bottom_container.addView(last_point);
+
+                                show_Map.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
+                                show_Map.addMarker(new MarkerOptions().position(destination).title("목표지점"));
                                 show_Map.addPolyline(rectOptions);
                             }
                             catch (Exception e){
@@ -266,12 +340,18 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
 
 
     public void getWalk() {
+        bus_image.setImageResource(R.drawable.bus_passive);
+        walk_image.setImageResource(R.drawable.walk_active);
+        cur_mode="walk";
         bottom_type.setText("도보");
-        //티맵 데이터 객체로 경로를 요청, 날라온 폴리라인을 분해해서 이걸로 다시 구글 폴리라인을 생성, 상당히 번거롭다
-        //아래는 지오 제이썬 객체로 도보 경로를 받아온 것, 여기의 좌표로 폴리라인을 그릴 수 있다면 충분함 그걸로 대체하는 방향으로 가자
+        show_Map.clear();
+        bottom_container.removeAllViews();
+//        티맵 데이터 객체로 경로를 요청, 날라온 폴리라인을 분해해서 이걸로 다시 구글 폴리라인을 생성, 상당히 번거롭다
+//        아래는 지오 제이썬 객체로 도보 경로를 받아온 것, 여기의 좌표로 폴리라인을 그릴 수 있다면 충분함 그걸로 대체하는 방향으로 가자
         tMapData.findPathDataWithType(TMapData.TMapPathType.PEDESTRIAN_PATH, tMap_start, tMap_end, new TMapData.FindPathDataListenerCallback() {
             @Override
             public void onFindPathData(TMapPolyLine tMapPolyLine) {
+
                 ArrayList<TMapPoint> tmap_poly = tMapPolyLine.getLinePoint();
                 ArrayList<LatLng> google_poly = new ArrayList<LatLng>();
                 walkOptions = new PolylineOptions();
@@ -285,7 +365,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                         mHandler.post(new Runnable() {
                             @Override
                             public void run() {
-                                show_Map.clear();
+                                show_Map.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
+                                show_Map.addMarker(new MarkerOptions().position(destination).title("목표지점"));
                                 show_Map.addPolyline(walkOptions);
                             }
                         });
@@ -297,6 +378,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
             @Override
             public void run() {
                 try {
+                    Log.e("워크 어싱크야 돌아라","11");
                     //도보 경로 티맵 geoJSON 받아오는 유알엘, 리퀘스트 코드 타입과 리스본스 코드 타입을 조심할 것, 경도 위도가 일반적인 순서와 다르다
                     String tes_url="https://apis.skplanetx.com/tmap/routes/pedestrian?version=1&startX="+staticValues.mLastLong+"&startY="+staticValues.mLastLat+"&endX="+longitude+"&endY="+latitude+"&startName=start&endName=end&reqCoordType=WGS84GEO&resCoordType=WGS84GEO&appKey=4004a4c7-8e67-3c17-88d9-9799c613ecc7";
                     URL url = new URL(tes_url);
@@ -309,36 +391,50 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     conn.connect();
 
                     if(conn.getResponseCode()==200){
-                        Log.e("성공",tes_url);
                         BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
                         StringBuilder sb = new StringBuilder();
                         String line = null;
-                        while ((line = br.readLine()) != null) {
+
+                        while ((line=br.readLine()) != null) {
                             sb.append(line);
                         }
+                        JSONObject org_obj=new JSONObject(sb.toString());
+                        Log.e("11","11");
+                        features=org_obj.getJSONArray("features");
+                        Log.e("11","11");
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                Log.e("워크 핸들러야 돌아라","11");
+                                try {
+                                    String walk_time=(new JSONObject(features.getJSONObject(0).getString("properties"))).getString("totalTime");
+                                    int added_walk_time=Integer.parseInt(walk_time)/60;
+
+                                    String walk_distance=(new JSONObject(features.getJSONObject(0).getString("properties"))).getString("totalDistance");
+                                    float added_walk_distance=(Float.parseFloat(walk_distance)/(float)1000);
+                                    bottom_distance.setText(String.format("%.2f",added_walk_distance)+"km");
+                                    bottom_time.setText(added_walk_time+"분");
+
+                                } catch (Exception e) {
+                                    StringWriter sw = new StringWriter();
+                                    e.printStackTrace(new PrintWriter(sw));
+                                    String exceptionAsStrting = sw.toString();
+                                    Log.e("예외발생", exceptionAsStrting);
+                                }
+                                return;
+                            }
+                        });
                     }
                     else{
                         Log.e("유알엘",tes_url);
                         Log.e("실패코드", Integer.toString(conn.getResponseCode()));
                         Log.e("실패코드", conn.getResponseMessage());
                     }
-
-                    mHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-
-                            } catch (Exception e) {
-                                StringWriter sw = new StringWriter();
-                                e.printStackTrace(new PrintWriter(sw));
-                                String exceptionAsStrting = sw.toString();
-                                Log.e("예외발생", exceptionAsStrting);
-                            }
-                            return;
-                        }
-                    });
                 } catch (Exception e) {
-
+                    StringWriter sw = new StringWriter();
+                    e.printStackTrace(new PrintWriter(sw));
+                    String exceptionAsStrting = sw.toString();
+                    Log.e("예외발생", exceptionAsStrting);
                 }
             }
         });

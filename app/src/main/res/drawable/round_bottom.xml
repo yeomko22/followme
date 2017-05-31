@@ -10,7 +10,6 @@
             android:dashGap="20dp" />
     -->
 
-    <corners android:radius="5dp"/>
     <padding
         android:left="10dp"
         android:top="10dp"

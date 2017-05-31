@@ -158,7 +158,7 @@
                     android:id="@+id/show_route_time"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="timeadf"
+                    android:text="찾는 중"
                     android:textColor="@color/background"
                     android:textSize="25dp" />
 
@@ -166,7 +166,7 @@
                     android:id="@+id/show_route_distance"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="distance"
+                    android:text="찾는 중"
                     android:layout_marginLeft="15dp"
                     android:textSize="15dp" />
             </LinearLayout>
