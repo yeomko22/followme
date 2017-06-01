@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -26,7 +27,16 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.skp.Tmap.TMapTapi;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.List;
 
 import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
@@ -39,15 +49,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private TextView start_point;
     private TextView end_point;
     private GoogleApiClient mGoogleApiClient;
+    private HttpURLConnection conn;
+    private android.os.Handler mHandler;
+    private JSONArray features;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
 
-        //TMap 앱 연동 인증
-
+        start_point=(TextView)findViewById(R.id.start_point);
+        mHandler=new android.os.Handler();
     }
     protected void onStart(){
         super.onStart();
@@ -95,14 +108,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        Log.e("지도 준비됬다","11");
         mMap = googleMap;
-        mMap.setOnCameraMoveListener(new GoogleMap.OnCameraMoveListener() {
-            @Override
-            public void onCameraMove() {
-                Log.e("카메라 이동을 감지","뿜뿜");
-            }
-        });
         // Add a marker in Sydney and move the camera
     }
 
@@ -126,17 +132,63 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
 
-            try{
-                List<Address> addresses= geocoder.getFromLocation(staticValues.mLastLat, staticValues.mLastLong,4);
-                String str_address=addresses.get(0).getAddressLine(0);
-                str_address=str_address.replaceFirst("대한민국","");
-                str_address=str_address.replaceFirst("특별시","");
-                staticValues.cur_address=str_address;
-                start_point.setText(str_address);
-            }
-            catch(IOException e){
-                Log.e("IO 예외 뜨심","!!");
-            }
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        //https://maps.googleapis.com/maps/api/geocode/json?latlng=40.714224,-73.961452&key=YOUR_API_KEY
+                        String tes_url="https://maps.googleapis.com/maps/api/geocode/json?latlng="+staticValues.mLastLat+","
+                                +staticValues.mLastLong+"&key=AIzaSyC2KPG-dhy-IqT1iBhb6W4N3WC1od4qAN0&language=ko";
+                        URL url = new URL(tes_url);
+
+                        conn = (HttpURLConnection) url.openConnection();
+                        conn.setRequestMethod("GET");
+                        conn.setDoInput(true);
+                        conn.setDoOutput(true);
+                        conn.setConnectTimeout(2000);
+                        conn.connect();
+
+                        if(conn.getResponseCode()==200){
+                            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                            StringBuilder sb = new StringBuilder();
+                            String line = null;
+
+                            while ((line=br.readLine()) != null) {
+                                sb.append(line);
+                            }
+                            JSONObject org_obj=new JSONObject(sb.toString());
+                            JSONArray result_array=new JSONArray(org_obj.getString("results"));
+                            JSONObject target_obj=result_array.getJSONObject(0);
+                            features=new JSONArray(target_obj.getString("address_components"));
+
+                            mHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        start_point.setText(features.getJSONObject(0).getString("short_name"));
+                                    } catch (Exception e) {
+                                        StringWriter sw = new StringWriter();
+                                        e.printStackTrace(new PrintWriter(sw));
+                                        String exceptionAsStrting = sw.toString();
+                                        Log.e("예외발생", exceptionAsStrting);
+                                    }
+                                    return;
+                                }
+                            });
+                        }
+                        else{
+                            Log.e("유알엘",tes_url);
+                            Log.e("실패코드", Integer.toString(conn.getResponseCode()));
+                            Log.e("실패코드", conn.getResponseMessage());
+                        }
+                    } catch (Exception e) {
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        String exceptionAsStrting = sw.toString();
+                        Log.e("예외발생", exceptionAsStrting);
+                    }
+                }
+            });
         }
        else{
             Log.e("위치 못잡음","얘 정신 못차린다");
@@ -180,7 +232,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 start_point.setText(str_address);
             }
             catch(IOException e){
-                Log.e("IO 예외 뜨심","!!");
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String exceptionAsStrting = sw.toString();
+                Log.e("예외발생", exceptionAsStrting);
             }
         }
         else{
