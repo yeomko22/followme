@@ -170,7 +170,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     conn.setRequestMethod("POST");
                     conn.setDoInput(true);
                     conn.setDoOutput(true);
-                    conn.setConnectTimeout(1000);
+                    conn.setConnectTimeout(2000);
                     conn.connect();
 
                     BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(),"UTF-8"));
@@ -387,7 +387,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     conn.setRequestMethod("GET");
                     conn.setDoInput(true);
                     conn.setDoOutput(true);
-                    conn.setConnectTimeout(1000);
+                    conn.setConnectTimeout(2000);
                     conn.connect();
 
                     if(conn.getResponseCode()==200){
@@ -441,13 +441,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     }
 
     public void set_camera(View v){
-        Toast.makeText(show_route_activity.this,"hi",Toast.LENGTH_LONG).show();
-        LatLng cur_location=new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-        LatLng destination=new LatLng(Double.parseDouble(latitude),Double.parseDouble(longitude));
-
-        show_Map.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
-        show_Map.addMarker(new MarkerOptions().position(destination).title("목표지점"));
-
-        show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
+        Intent intent=new Intent(show_route_activity.this,ar_activity.class);
+        startActivity(intent);
     }
 }

@@ -4,7 +4,10 @@ import android.location.Location;
 
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
 import com.skp.Tmap.TMapData;
+
+import java.util.ArrayList;
 
 /**
  * Created by junny on 2017. 5. 23..
@@ -19,4 +22,5 @@ public class staticValues {
     public static TMapData tMapData;
     public static String cur_address;
     public static DBHelper dbHelper;
+    public static ArrayList<LatLng> route;
 }
