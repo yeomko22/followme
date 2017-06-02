@@ -180,8 +180,6 @@ public class search_endpoint_activity extends FragmentActivity implements Google
                 }
 
                 else{
-                    Log.e("기존 텍스트", cur_text);
-                    Log.e("새 텍스트", new_text);
                     cur_text=new_text;
                     AsyncTask.execute(new Runnable() {
                         @Override

@@ -40,9 +40,9 @@ public class DetailAdapter extends RecyclerView.Adapter<DetailAdapter.ViewHolder
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(mContext, show_route_activity.class);
-                intent.putExtra("latitude",detail_item.getLatitude());
-                intent.putExtra("longitude",detail_item.getLongitude());
-                intent.putExtra("title", detail_item.getTitle());
+                staticValues.to_lat=detail_item.getLatitude();
+                staticValues.to_long=detail_item.getLongitude();
+                staticValues.to_title=detail_item.getTitle();
                 if(staticValues.dbHelper==null){
                     staticValues.dbHelper=new DBHelper(mContext, "history", null, version);
                 }

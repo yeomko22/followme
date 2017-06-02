@@ -4,6 +4,7 @@ import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -40,6 +41,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
+import static com.example.junny.followme_realbeta.staticValues.walk_google_poly;
+import static com.example.junny.followme_realbeta.staticValues.walk_guide;
+import static com.example.junny.followme_realbeta.staticValues.walk_guide_poly;
 
 public class show_route_activity extends FragmentActivity implements OnMapReadyCallback {
     private TextView start_point_view;
@@ -55,22 +59,33 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     private String cur_mode="bus";
     private FragmentManager fm;
     private HttpURLConnection conn;
+
     private String title;
     private String latitude;
     private String longitude;
+
     private GoogleMap show_Map;
     private Handler mHandler;
+
     private LatLng cur_location;
     private LatLng destination;
     private LatLng middle_point;
+
+    private Location from;
+    private Location to;
+    private float distance;
+
     private TMapData tMapData;
     private TMapPoint tMap_start;
     private TMapPoint tMap_end;
+
     private PolylineOptions walkOptions;
     private Resources res;
     private String last_stop;
     private JSONArray features;
     private boolean contain_transit;
+
+    private PolylineOptions walk_poly_options;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,16 +105,25 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
         bottom_distance=(TextView)findViewById(R.id.show_route_distance);
 
         Intent intent=getIntent();
-        latitude=intent.getStringExtra("latitude");
-        longitude=intent.getStringExtra("longitude");
-        title=intent.getStringExtra("title");
+        latitude=staticValues.to_lat;
+        longitude=staticValues.to_long;
+        title=staticValues.to_title;
 
         mHandler=new Handler();
-        cur_location=new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-        tMap_start=new TMapPoint(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+        cur_location=new LatLng(staticValues.mLastLat, staticValues.mLastLong);
+        tMap_start=new TMapPoint(staticValues.mLastLat, staticValues.mLastLong);
 
         destination=new LatLng(Double.parseDouble(latitude),Double.parseDouble(longitude));
         tMap_end=new TMapPoint(Double.parseDouble(latitude),Double.parseDouble(longitude));
+
+        from=new Location("from");
+        from.setLatitude(staticValues.mLastLat);
+        from.setLongitude(staticValues.mLastLong);
+        to=new Location("to");
+        to.setLatitude(Double.parseDouble(latitude));
+        to.setLongitude(Double.parseDouble(longitude));
+        distance=from.distanceTo(to);
+        Log.e("직선 거리", Float.toString(distance));
 
         middle_point=new LatLng(((mLastLocation.getLatitude()+Double.parseDouble(latitude))/(double)2),((mLastLocation.getLongitude()+Double.parseDouble(longitude))/(double)2));
 
@@ -125,7 +149,58 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     public void onMapReady(GoogleMap googleMap) {
         Log.e("지도 준비됬다","11");
         show_Map = googleMap;
-        show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,12));
+        if(distance<100){
+            Log.e("직선 거리","100 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,19));
+        }
+        if(distance<300){
+            Log.e("직선 거리","300 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,17));
+        }
+
+        else if(distance<500){
+            Log.e("직선 거리","500 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,16));
+        }
+
+        else if(distance<1000){
+            Log.e("직선 거리","1000 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,15));
+        }
+
+        else if(distance<2000){
+            Log.e("직선 거리","2000 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,14));
+        }
+        else if(distance<3500){
+            Log.e("직선 거리","3500 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,13));
+        }
+        else if(distance<7500){
+            Log.e("직선 거리","7500 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,12));
+        }
+        else if(distance<10000){
+            Log.e("직선 거리","10000 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,11));
+        }
+        else if(distance<20000){
+            Log.e("직선 거리","20000 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,10));
+        }
+        else if(distance<40000){
+            Log.e("직선 거리","20000 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,9));
+        }
+        else if(distance<80000){
+            Log.e("직선 거리","50000 미만");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,8));
+        }
+        else{
+            Log.e("직선 거리","그 외");
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,8));
+        }
+
         // Add a marker in Sydney and move the camera
     }
     public void replace(View v){
@@ -164,6 +239,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     String str_url="https://maps.googleapis.com/maps/api/directions/json?origin="+
                             staticValues.mLastLat+","+staticValues.mLastLong+"&destination="+latitude+","+longitude+
                             "&mode=transit&language=ko&key=AIzaSyBAy4VmTHyOCI1e_XvXwRlNn7pqwKU0t7o";
+                    Log.e("url",str_url);
                     URL url=new URL(str_url);
 
                     conn=(HttpURLConnection)url.openConnection();
@@ -353,11 +429,12 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
             public void onFindPathData(TMapPolyLine tMapPolyLine) {
 
                 ArrayList<TMapPoint> tmap_poly = tMapPolyLine.getLinePoint();
-                ArrayList<LatLng> google_poly = new ArrayList<LatLng>();
+                staticValues.walk_google_poly=new ArrayList<LatLng>();
                 walkOptions = new PolylineOptions();
                 for (int i = 0; i < tmap_poly.size(); i++) {
                     TMapPoint cur_tpoint = tmap_poly.get(i);
                     walkOptions.add(new LatLng(cur_tpoint.getLatitude(), cur_tpoint.getLongitude()));
+                    staticValues.walk_google_poly.add(new LatLng(cur_tpoint.getLatitude(), cur_tpoint.getLongitude()));
                 }
                 AsyncTask.execute(new Runnable() {
                     @Override
@@ -368,6 +445,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                 show_Map.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
                                 show_Map.addMarker(new MarkerOptions().position(destination).title("목표지점"));
                                 show_Map.addPolyline(walkOptions);
+                                staticValues.cur_poly=walkOptions;
                             }
                         });
                     }
@@ -381,6 +459,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     Log.e("워크 어싱크야 돌아라","11");
                     //도보 경로 티맵 geoJSON 받아오는 유알엘, 리퀘스트 코드 타입과 리스본스 코드 타입을 조심할 것, 경도 위도가 일반적인 순서와 다르다
                     String tes_url="https://apis.skplanetx.com/tmap/routes/pedestrian?version=1&startX="+staticValues.mLastLong+"&startY="+staticValues.mLastLat+"&endX="+longitude+"&endY="+latitude+"&startName=start&endName=end&reqCoordType=WGS84GEO&resCoordType=WGS84GEO&appKey=4004a4c7-8e67-3c17-88d9-9799c613ecc7";
+                    Log.e("도보 url", tes_url);
                     URL url = new URL(tes_url);
 
                     conn = (HttpURLConnection) url.openConnection();
@@ -399,14 +478,36 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                             sb.append(line);
                         }
                         JSONObject org_obj=new JSONObject(sb.toString());
-                        Log.e("11","11");
                         features=org_obj.getJSONArray("features");
-                        Log.e("11","11");
+
+                        walk_poly_options = new PolylineOptions();
+                        staticValues.walk_guide_poly=new ArrayList<LatLng>();
+                        staticValues.walk_guide=new ArrayList<String>();
+
+                        for(int i=0;i<features.length();i++){
+                            JSONObject cur_obj=features.getJSONObject(i);
+                            JSONObject cur_geo=new JSONObject(cur_obj.getString("geometry"));
+                            JSONObject cur_prop=new JSONObject(cur_obj.getString("properties"));
+
+                            if(cur_geo.getString("type").equals("Point")){
+                                String point_array=cur_geo.getString("coordinates");
+                                if(point_array.charAt(1)!='['){
+                                    String trim_string=point_array.substring(1,point_array.length()-1);
+                                    String[] res=trim_string.split(",");
+                                    LatLng cur_point=new LatLng(Double.parseDouble(res[1]),Double.parseDouble(res[0]));
+
+                                    walk_poly_options.add(cur_point);
+                                    staticValues.walk_guide_poly.add(cur_point);
+                                    staticValues.walk_guide.add(cur_prop.getString("description"));
+                                }
+                            }
+                        }
                         mHandler.post(new Runnable() {
                             @Override
                             public void run() {
                                 Log.e("워크 핸들러야 돌아라","11");
                                 try {
+
                                     String walk_time=(new JSONObject(features.getJSONObject(0).getString("properties"))).getString("totalTime");
                                     int added_walk_time=Integer.parseInt(walk_time)/60;
 
@@ -441,7 +542,16 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     }
 
     public void set_camera(View v){
-        Intent intent=new Intent(show_route_activity.this,ar_activity.class);
-        startActivity(intent);
+        if((staticValues.walk_guide_poly!=null)&&(walk_guide!=null)&&(walk_google_poly!=null)&&(staticValues.walk_guide_poly.size()>3)){
+            Intent intent=new Intent(show_route_activity.this,ar_activity.class);
+            startActivity(intent);
+        }
+        else{
+            Log.e("가이드 폴리",Integer.toString(walk_google_poly.size()));
+            Log.e("워크 가이드 폴리", Integer.toString(walk_guide_poly.size()));
+            Log.e("설명 개수",Integer.toString(walk_guide.size()));
+            Toast.makeText(show_route_activity.this,"경로 정보를 준비중입니다",Toast.LENGTH_LONG).show();
+        }
+
     }
 }

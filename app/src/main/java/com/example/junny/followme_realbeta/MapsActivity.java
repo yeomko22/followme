@@ -3,7 +3,6 @@ package com.example.junny.followme_realbeta;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Address;
 import android.location.Geocoder;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -18,12 +17,14 @@ import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.skp.Tmap.TMapTapi;
 
@@ -31,15 +32,15 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.List;
 
+import static com.example.junny.followme_realbeta.staticValues.cur_address;
 import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
+import static com.example.junny.followme_realbeta.staticValues.mLocationRequest;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -52,6 +53,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private HttpURLConnection conn;
     private android.os.Handler mHandler;
     private JSONArray features;
+    private Marker mMarker;
 
 
     @Override
@@ -59,8 +61,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
+        Intent intent=new Intent(MapsActivity.this, SplashActivity.class);
+        startActivity(intent);
+
         start_point=(TextView)findViewById(R.id.start_point);
         mHandler=new android.os.Handler();
+
+        if (mGoogleApiClient == null) {
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
+        }
+        mGoogleApiClient.connect();
+        TMapTapi tMapTapi = new TMapTapi(this);
+        tMapTapi.setSKPMapAuthentication("4004a4c7-8e67-3c17-88d9-9799c613ecc7");
+
+        start_point=(TextView)findViewById(R.id.start_point);
+        end_point=(TextView)findViewById(R.id.end_point);
+        staticValues.mapFragment=(SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.map);
+
+        if(geocoder==null){
+            geocoder=new Geocoder(MapsActivity.this);
+        }
+
+        staticValues.mapFragment.getMapAsync(this);
     }
     protected void onStart(){
         super.onStart();
@@ -72,30 +98,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     protected void onResume() {
-        if (mGoogleApiClient == null) {
-            mGoogleApiClient = new GoogleApiClient.Builder(this)
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .addApi(LocationServices.API)
-                    .build();
-        }
-        mGoogleApiClient.connect();
+//        createLocationRequest();
+//        getSetting();
+//        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+//                .addLocationRequest(mLocationRequest);
+//        PendingResult<LocationSettingsResult> result =
+//                LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient, builder.build());
 
-        TMapTapi tMapTapi = new TMapTapi(this);
-        tMapTapi.setSKPMapAuthentication("4004a4c7-8e67-3c17-88d9-9799c613ecc7");
 
-        start_point=(TextView)findViewById(R.id.start_point);
-        end_point=(TextView)findViewById(R.id.end_point);
 
-        staticValues.mapFragment=(SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.map);
-
-        if(geocoder==null){
-            geocoder=new Geocoder(MapsActivity.this);
-        }
-
-        staticValues.mapFragment.getMapAsync(this);
         super.onResume();
     }
+
+    protected void createLocationRequest() {
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(10000);
+        mLocationRequest.setFastestInterval(5000);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    }
+//    protected void getSetting(){
+//
+//    }
 
     /**
      * Manipulates the map once available.
@@ -140,6 +163,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         String tes_url="https://maps.googleapis.com/maps/api/geocode/json?latlng="+staticValues.mLastLat+","
                                 +staticValues.mLastLong+"&key=AIzaSyC2KPG-dhy-IqT1iBhb6W4N3WC1od4qAN0&language=ko";
                         URL url = new URL(tes_url);
+                        Log.e("url",tes_url);
 
                         conn = (HttpURLConnection) url.openConnection();
                         conn.setRequestMethod("GET");
@@ -165,7 +189,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 @Override
                                 public void run() {
                                     try {
-                                        start_point.setText(features.getJSONObject(0).getString("short_name"));
+                                        staticValues.cur_address=features.getJSONObject(2).getString("short_name")+" "+features.getJSONObject(1).getString("short_name")+" "+features.getJSONObject(0).getString("short_name");
+                                        if(cur_address.length()>15){
+                                            start_point.setText(staticValues.cur_address.substring(0,10)+"...");
+                                        }
+                                        else{
+                                            start_point.setText(cur_address);
+                                        }
                                     } catch (Exception e) {
                                         StringWriter sw = new StringWriter();
                                         e.printStackTrace(new PrintWriter(sw));
@@ -218,28 +248,92 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         mLastLocation=LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if(mLastLocation!=null){
+            Log.e("위치 잘 받아옴","온커넥트");
+            Log.e("받아온 경도", Double.toString(mLastLocation.getLatitude()));
+            Log.e("받아온 위도", Double.toString(mLastLocation.getLongitude()));
+
+            //일단 스태틱에 위치 저장, 이게 불필요한지 확인해서 제거할 것
             staticValues.mLastLat=mLastLocation.getLatitude();
             staticValues.mLastLong=mLastLocation.getLongitude();
-            LatLng cur_location=new LatLng(staticValues.mLastLat, staticValues.mLastLong);
+
+            final LatLng cur_location=new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+            Log.e("mMap검사", mMap.toString());
             mMap.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
-            try{
-                List<Address> addresses= geocoder.getFromLocation(staticValues.mLastLat, staticValues.mLastLong,4);
-                String str_address=addresses.get(0).getAddressLine(0);
-                str_address=str_address.replaceFirst("대한민국","");
-                str_address=str_address.replaceFirst("특별시","");
-                staticValues.cur_address=str_address;
-                start_point.setText(str_address);
-            }
-            catch(IOException e){
-                StringWriter sw = new StringWriter();
-                e.printStackTrace(new PrintWriter(sw));
-                String exceptionAsStrting = sw.toString();
-                Log.e("예외발생", exceptionAsStrting);
-            }
+
+            AsyncTask.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        //https://maps.googleapis.com/maps/api/geocode/json?latlng=40.714224,-73.961452&key=YOUR_API_KEY
+                        String tes_url="https://maps.googleapis.com/maps/api/geocode/json?latlng="+staticValues.mLastLat+","
+                                +staticValues.mLastLong+"&key=AIzaSyC2KPG-dhy-IqT1iBhb6W4N3WC1od4qAN0&language=ko";
+                        URL url = new URL(tes_url);
+                        Log.e("url",tes_url);
+
+                        conn = (HttpURLConnection) url.openConnection();
+                        conn.setRequestMethod("GET");
+                        conn.setDoInput(true);
+                        conn.setDoOutput(true);
+                        conn.setConnectTimeout(2000);
+                        conn.connect();
+
+                        if(conn.getResponseCode()==200){
+                            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                            StringBuilder sb = new StringBuilder();
+                            String line = null;
+
+                            while ((line=br.readLine()) != null) {
+                                sb.append(line);
+                            }
+                            JSONObject org_obj=new JSONObject(sb.toString());
+                            JSONArray result_array=new JSONArray(org_obj.getString("results"));
+                            JSONObject target_obj=result_array.getJSONObject(0);
+                            features=new JSONArray(target_obj.getString("address_components"));
+
+                            mHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        staticValues.cur_address=features.getJSONObject(2).getString("short_name")+" "+features.getJSONObject(1).getString("short_name")+" "+features.getJSONObject(0).getString("short_name");
+                                        if(cur_address.length()>15){
+                                            start_point.setText(staticValues.cur_address.substring(0,10)+"...");
+                                        }
+                                        else{
+                                            start_point.setText(cur_address);
+                                        }
+                                    } catch (Exception e) {
+                                        StringWriter sw = new StringWriter();
+                                        e.printStackTrace(new PrintWriter(sw));
+                                        String exceptionAsStrting = sw.toString();
+                                        Log.e("예외발생", exceptionAsStrting);
+                                    }
+                                    return;
+                                }
+                            });
+                        }
+                        else{
+                            Log.e("유알엘",tes_url);
+                            Log.e("실패코드", Integer.toString(conn.getResponseCode()));
+                            Log.e("실패코드", conn.getResponseMessage());
+                        }
+                    } catch (Exception e) {
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        String exceptionAsStrting = sw.toString();
+                        Log.e("예외발생", exceptionAsStrting);
+                    }
+                }
+            });
         }
         else{
-            Log.e("되야만해 이거뜨면 안대","11");
+            Log.e("위치 못잡음","얘 정신 못차린다");
+
+            LatLng seoul=new LatLng(37.5665, 126.9780);
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(seoul,10));
         }
+    }
+    public void start_tracking(){
+
     }
 }
