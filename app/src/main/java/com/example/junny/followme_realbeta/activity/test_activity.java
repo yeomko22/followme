@@ -1,4 +1,4 @@
-package com.example.junny.followme_realbeta;
+package com.example.junny.followme_realbeta.activity;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -20,6 +20,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;

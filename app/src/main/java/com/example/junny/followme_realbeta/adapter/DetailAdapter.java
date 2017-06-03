@@ -1,17 +1,30 @@
-package com.example.junny.followme_realbeta;
+package com.example.junny.followme_realbeta.adapter;
 
 import android.content.Context;
 import android.content.Intent;
+import android.location.Location;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.activity.show_route_activity;
+import com.example.junny.followme_realbeta.item.DBHelper;
+import com.example.junny.followme_realbeta.item.detail_item;
+import com.example.junny.followme_realbeta.staticValues;
+import com.google.android.gms.maps.model.LatLng;
+
 import java.util.ArrayList;
 
 import static android.R.attr.version;
+import static com.example.junny.followme_realbeta.staticValues.mLastLat;
+import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
+import static com.example.junny.followme_realbeta.staticValues.mLastLong;
+import static com.example.junny.followme_realbeta.staticValues.to_lat;
+import static com.example.junny.followme_realbeta.staticValues.to_location;
+import static com.example.junny.followme_realbeta.staticValues.to_long;
 
 /**
  * Created by junny on 2017. 5. 23..
@@ -40,17 +53,23 @@ public class DetailAdapter extends RecyclerView.Adapter<DetailAdapter.ViewHolder
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(mContext, show_route_activity.class);
-                staticValues.to_lat=detail_item.getLatitude();
-                staticValues.to_long=detail_item.getLongitude();
+                staticValues.to_lat=Double.parseDouble(detail_item.getLatitude());
+                staticValues.to_long=Double.parseDouble(detail_item.getLongitude());
+                staticValues.to_latlng=new LatLng(staticValues.to_lat,staticValues.to_long);
                 staticValues.to_title=detail_item.getTitle();
+
+                to_location=new Location("to");
+                to_location.setLatitude(staticValues.to_lat);
+                to_location.setLongitude(to_long);
+
+                staticValues.distance=mLastLocation.distanceTo(to_location);
+                staticValues.middle_point=new LatLng(((mLastLat+to_lat)/2.0),((mLastLong+to_long)/2.0));
+
                 if(staticValues.dbHelper==null){
                     staticValues.dbHelper=new DBHelper(mContext, "history", null, version);
                 }
                 staticValues.dbHelper.insert(detail_item.getTitle(), detail_item.getNewAddress(), detail_item.getLatitude(), detail_item.getLongitude());
-                Log.e("나 눌렸잖아요 뱀~","11");
                 mContext.startActivity(intent);
-                //여기서 이루어져야 할 것 - 로컬 디비 검색결과 추가
-                //다음 액티비티에 눌린 놈의 타이틀, 경도 위도 좌표값 던져주기
             }
         });
     }

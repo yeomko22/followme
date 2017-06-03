@@ -1,8 +1,10 @@
-package com.example.junny.followme_realbeta;
+package com.example.junny.followme_realbeta.activity;
 
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+
+import com.example.junny.followme_realbeta.R;
 
 public class SplashActivity extends AppCompatActivity {
 

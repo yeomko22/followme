@@ -1,4 +1,4 @@
-package com.example.junny.followme_realbeta;
+package com.example.junny.followme_realbeta.adapter;
 
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +8,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.example.junny.followme_realbeta.item.DBHelper;
+import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.activity.endpoint_detail_activity;
+import com.example.junny.followme_realbeta.item.search_item;
 
 import java.util.ArrayList;
 

@@ -1,4 +1,4 @@
-package com.example.junny.followme_realbeta;
+package com.example.junny.followme_realbeta.activity;
 
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -17,6 +17,11 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.example.junny.followme_realbeta.item.DBHelper;
+import com.example.junny.followme_realbeta.adapter.MyRecyclerAdapter;
+import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.item.search_item;
+import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.places.AutocompleteFilter;

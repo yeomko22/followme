@@ -1,4 +1,4 @@
-package com.example.junny.followme_realbeta;
+package com.example.junny.followme_realbeta.activity;
 
 import android.Manifest;
 import android.content.Intent;
@@ -14,7 +14,10 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
@@ -98,15 +101,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     protected void onResume() {
-//        createLocationRequest();
-//        getSetting();
-//        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
-//                .addLocationRequest(mLocationRequest);
-//        PendingResult<LocationSettingsResult> result =
-//                LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient, builder.build());
-
-
-
         super.onResume();
     }
 
@@ -140,7 +134,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(ContextCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},0);
         }
-        mLastLocation=LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        staticValues.mLastLocation=LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if(mLastLocation!=null){
             Log.e("위치 잘 받아옴","온커넥트");
             Log.e("받아온 경도", Double.toString(mLastLocation.getLatitude()));
@@ -149,6 +143,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //일단 스태틱에 위치 저장, 이게 불필요한지 확인해서 제거할 것
             staticValues.mLastLat=mLastLocation.getLatitude();
             staticValues.mLastLong=mLastLocation.getLongitude();
+            staticValues.mLastLatLong=new LatLng(staticValues.mLastLat, staticValues.mLastLong);
 
             LatLng cur_location=new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
             Log.e("mMap검사", mMap.toString());
@@ -237,9 +232,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
     public void search_endpoint(View v){
-        Intent go_search = new Intent(getApplicationContext(), search_endpoint_activity.class);
-        go_search.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        startActivity(go_search);
+        if(staticValues.mLastLocation==null){
+            Toast.makeText(MapsActivity.this, "현재 위치를 설정해야 합니다.\n 새로고침을 눌러주세요",Toast.LENGTH_LONG).show();
+        }
+        else{
+            Intent go_search = new Intent(getApplicationContext(), search_endpoint_activity.class);
+            go_search.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP|Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(go_search);
+        }
     }
 
     public void reset_curlocation(View v){
@@ -255,6 +255,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //일단 스태틱에 위치 저장, 이게 불필요한지 확인해서 제거할 것
             staticValues.mLastLat=mLastLocation.getLatitude();
             staticValues.mLastLong=mLastLocation.getLongitude();
+            staticValues.mLastLatLong=new LatLng(staticValues.mLastLat,staticValues.mLastLong);
+
 
             final LatLng cur_location=new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
             Log.e("mMap검사", mMap.toString());
@@ -332,8 +334,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             LatLng seoul=new LatLng(37.5665, 126.9780);
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(seoul,10));
         }
-    }
-    public void start_tracking(){
-
     }
 }

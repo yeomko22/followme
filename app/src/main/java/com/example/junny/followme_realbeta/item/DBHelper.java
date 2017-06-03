@@ -1,4 +1,4 @@
-package com.example.junny.followme_realbeta;
+package com.example.junny.followme_realbeta.item;
 
 import android.content.Context;
 import android.database.Cursor;

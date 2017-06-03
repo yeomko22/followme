@@ -1,4 +1,4 @@
-package com.example.junny.followme_realbeta;
+package com.example.junny.followme_realbeta.fragment;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -15,6 +15,8 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+
+import com.example.junny.followme_realbeta.R;
 
 import java.io.IOException;
 import java.io.PrintWriter;

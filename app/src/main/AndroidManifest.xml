@@ -33,7 +33,7 @@
             android:value="AIzaSyAP6i684IOOrLZw8oQT0509e0cp32nH-60" />
 
         <activity
-            android:name=".MapsActivity"
+            android:name=".activity.MapsActivity"
             android:label="@string/title_activity_maps"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar">
             <intent-filter>
@@ -43,22 +43,22 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".search_endpoint_activity"
+            android:name=".activity.search_endpoint_activity"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
             android:windowSoftInputMode="adjustPan" />
         <activity
-            android:name=".endpoint_detail_activity"
+            android:name=".activity.endpoint_detail_activity"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
         <activity
-            android:name=".show_route_activity"
+            android:name=".activity.show_route_activity"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
         <activity
-            android:name=".ar_activity"
+            android:name=".activity.ar_activity"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
         <activity
-            android:name=".test_activity"
+            android:name=".activity.test_activity"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
-        <activity android:name=".SplashActivity" android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"></activity>
+        <activity android:name=".activity.SplashActivity" android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"></activity>
     </application>
 
 </manifest>

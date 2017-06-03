@@ -1,4 +1,4 @@
-package com.example.junny.followme_realbeta;
+package com.example.junny.followme_realbeta.activity;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -11,6 +11,10 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+
+import com.example.junny.followme_realbeta.adapter.DetailAdapter;
+import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.item.detail_item;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

@@ -1,10 +1,9 @@
-package com.example.junny.followme_realbeta;
+package com.example.junny.followme_realbeta.activity;
 
 import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
-import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -17,6 +16,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -40,7 +41,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
+import static com.example.junny.followme_realbeta.staticValues.middle_point;
+import static com.example.junny.followme_realbeta.staticValues.to_lat;
+import static com.example.junny.followme_realbeta.staticValues.to_long;
+import static com.example.junny.followme_realbeta.staticValues.to_title;
 import static com.example.junny.followme_realbeta.staticValues.walk_google_poly;
 import static com.example.junny.followme_realbeta.staticValues.walk_guide;
 import static com.example.junny.followme_realbeta.staticValues.walk_guide_poly;
@@ -60,20 +64,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     private FragmentManager fm;
     private HttpURLConnection conn;
 
-    private String title;
-    private String latitude;
-    private String longitude;
-
     private GoogleMap show_Map;
     private Handler mHandler;
-
-    private LatLng cur_location;
-    private LatLng destination;
-    private LatLng middle_point;
-
-    private Location from;
-    private Location to;
-    private float distance;
 
     private TMapData tMapData;
     private TMapPoint tMap_start;
@@ -105,32 +97,14 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
         bottom_distance=(TextView)findViewById(R.id.show_route_distance);
 
         Intent intent=getIntent();
-        latitude=staticValues.to_lat;
-        longitude=staticValues.to_long;
-        title=staticValues.to_title;
 
         mHandler=new Handler();
-        cur_location=new LatLng(staticValues.mLastLat, staticValues.mLastLong);
         tMap_start=new TMapPoint(staticValues.mLastLat, staticValues.mLastLong);
-
-        destination=new LatLng(Double.parseDouble(latitude),Double.parseDouble(longitude));
-        tMap_end=new TMapPoint(Double.parseDouble(latitude),Double.parseDouble(longitude));
-
-        from=new Location("from");
-        from.setLatitude(staticValues.mLastLat);
-        from.setLongitude(staticValues.mLastLong);
-        to=new Location("to");
-        to.setLatitude(Double.parseDouble(latitude));
-        to.setLongitude(Double.parseDouble(longitude));
-        distance=from.distanceTo(to);
-        Log.e("직선 거리", Float.toString(distance));
-
-        middle_point=new LatLng(((mLastLocation.getLatitude()+Double.parseDouble(latitude))/(double)2),((mLastLocation.getLongitude()+Double.parseDouble(longitude))/(double)2));
+        tMap_end=new TMapPoint(staticValues.to_lat, to_long);
 
         SupportMapFragment showmapFragment=(SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.show_map);
         showmapFragment.getMapAsync(this);
         tMapData=new TMapData();
-
 
         if (staticValues.cur_address.length()>8){
             start_point_view.setText(staticValues.cur_address.substring(0,8)+"...");
@@ -139,69 +113,70 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
             start_point_view.setText(staticValues.cur_address);
         }
 
-        if(title.length()>8){
-            end_point_view.setText(title.substring(0,8)+"...");
+        if(to_title.length()>8){
+            end_point_view.setText(to_title.substring(0,8)+"...");
         }
-        else{end_point_view.setText(title);}
+        else{end_point_view.setText(to_title);}
         getTransit();
     }
 
     public void onMapReady(GoogleMap googleMap) {
-        Log.e("지도 준비됬다","11");
         show_Map = googleMap;
-        if(distance<100){
+        set_zoom();
+    }
+
+    public void set_zoom(){
+        if(staticValues.distance<100){
             Log.e("직선 거리","100 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,19));
         }
-        if(distance<300){
+        else if(staticValues.distance<300){
             Log.e("직선 거리","300 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,17));
         }
 
-        else if(distance<500){
+        else if(staticValues.distance<500){
             Log.e("직선 거리","500 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,16));
         }
 
-        else if(distance<1000){
+        else if(staticValues.distance<1000){
             Log.e("직선 거리","1000 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,15));
         }
 
-        else if(distance<2000){
+        else if(staticValues.distance<2000){
             Log.e("직선 거리","2000 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,14));
         }
-        else if(distance<3500){
+        else if(staticValues.distance<3500){
             Log.e("직선 거리","3500 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,13));
         }
-        else if(distance<7500){
+        else if(staticValues.distance<7500){
             Log.e("직선 거리","7500 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,12));
         }
-        else if(distance<10000){
-            Log.e("직선 거리","10000 미만");
+        else if(staticValues.distance<15000){
+            Log.e("직선 거리","15000 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,11));
         }
-        else if(distance<20000){
-            Log.e("직선 거리","20000 미만");
+        else if(staticValues.distance<30000){
+            Log.e("직선 거리","30000 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,10));
         }
-        else if(distance<40000){
-            Log.e("직선 거리","20000 미만");
+        else if(staticValues.distance<40000){
+            Log.e("직선 거리","40000 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,9));
         }
-        else if(distance<80000){
-            Log.e("직선 거리","50000 미만");
+        else if(staticValues.distance<80000){
+            Log.e("직선 거리","80000 미만");
             show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,8));
         }
         else{
             Log.e("직선 거리","그 외");
-            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,8));
+            show_Map.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,7));
         }
-
-        // Add a marker in Sydney and move the camera
     }
     public void replace(View v){
         switch(v.getId()){
@@ -237,7 +212,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
 
                     //다음 로컬 api를 사용https://apis.daum.net/local/v1/search/keyword.json?apikey=5a3b393c51ad7571d6a92599bd57a77e&query=%ED%99%8D%EB%8C%80
                     String str_url="https://maps.googleapis.com/maps/api/directions/json?origin="+
-                            staticValues.mLastLat+","+staticValues.mLastLong+"&destination="+latitude+","+longitude+
+                            staticValues.mLastLat+","+staticValues.mLastLong+"&destination="+to_lat+","+to_long+
                             "&mode=transit&language=ko&key=AIzaSyBAy4VmTHyOCI1e_XvXwRlNn7pqwKU0t7o";
                     Log.e("url",str_url);
                     URL url=new URL(str_url);
@@ -350,8 +325,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                 ((TextView)(last_point.findViewById(R.id.last_name))).setText(last_stop+" 하차");
                                 bottom_container.addView(last_point);
 
-                                show_Map.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
-                                show_Map.addMarker(new MarkerOptions().position(destination).title("목표지점"));
+                                show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
+                                show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
                                 show_Map.addPolyline(rectOptions);
                             }
                             catch (Exception e){
@@ -442,8 +417,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                         mHandler.post(new Runnable() {
                             @Override
                             public void run() {
-                                show_Map.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
-                                show_Map.addMarker(new MarkerOptions().position(destination).title("목표지점"));
+                                show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
+                                show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
                                 show_Map.addPolyline(walkOptions);
                                 staticValues.cur_poly=walkOptions;
                             }
@@ -458,7 +433,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                 try {
                     Log.e("워크 어싱크야 돌아라","11");
                     //도보 경로 티맵 geoJSON 받아오는 유알엘, 리퀘스트 코드 타입과 리스본스 코드 타입을 조심할 것, 경도 위도가 일반적인 순서와 다르다
-                    String tes_url="https://apis.skplanetx.com/tmap/routes/pedestrian?version=1&startX="+staticValues.mLastLong+"&startY="+staticValues.mLastLat+"&endX="+longitude+"&endY="+latitude+"&startName=start&endName=end&reqCoordType=WGS84GEO&resCoordType=WGS84GEO&appKey=4004a4c7-8e67-3c17-88d9-9799c613ecc7";
+                    String tes_url="https://apis.skplanetx.com/tmap/routes/pedestrian?version=1&startX="+staticValues.mLastLong+"&startY="+staticValues.mLastLat+"&endX="+to_long+"&endY="+to_lat+"&startName=start&endName=end&reqCoordType=WGS84GEO&resCoordType=WGS84GEO&appKey=4004a4c7-8e67-3c17-88d9-9799c613ecc7";
                     Log.e("도보 url", tes_url);
                     URL url = new URL(tes_url);
 

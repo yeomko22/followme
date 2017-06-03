@@ -2,6 +2,7 @@ package com.example.junny.followme_realbeta;
 
 import android.location.Location;
 
+import com.example.junny.followme_realbeta.item.DBHelper;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.maps.SupportMapFragment;
@@ -31,12 +32,17 @@ public class staticValues {
     public static ArrayList<LatLng> walk_guide_poly;
     public static ArrayList<String> walk_guide;
 
-    public static String to_lat;
-    public static String to_long;
+    public static Double to_lat;
+    public static Double to_long;
     public static String to_title;
+    public static Location to_location;
+    public static LatLng to_latlng;
 
     public static Location mLastLocation;
     public static Double mLastLong;
     public static Double mLastLat;
+    public static LatLng mLastLatLong;
 
+    public static LatLng middle_point;
+    public static float distance;
 }
