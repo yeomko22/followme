@@ -28,9 +28,9 @@ public class staticValues {
     public static String total_time;
     public static PolylineOptions cur_poly;
     public static LocationRequest mLocationRequest;
-    public static ArrayList<LatLng> walk_google_poly;
-    public static ArrayList<LatLng> walk_guide_poly;
-    public static ArrayList<String> walk_guide;
+    public static ArrayList<LatLng> walk_all_latlng;
+    public static ArrayList<LatLng> walk_guide_latlng;
+    public static ArrayList<String> walk_guide_text;
 
     public static Double to_lat;
     public static Double to_long;

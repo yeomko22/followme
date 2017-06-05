@@ -5,7 +5,6 @@ import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraDevice;
 import android.location.Location;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -27,17 +26,12 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
 import com.skp.Tmap.TMapTapi;
-
-import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
 
 public class test_activity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener{
@@ -66,13 +60,13 @@ public class test_activity extends FragmentActivity implements OnMapReadyCallbac
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.test_activity);
-        guide_text=(TextView)findViewById(R.id.guide_text);
-        guide_num=(TextView)findViewById(R.id.guide_num);
-        distance_view=(TextView)findViewById(R.id.distance);
-        guide_text.setText(staticValues.walk_guide.get(cur_point));
-        from=new Location("From");
-        to=new Location("To");
-        mHandler=new Handler();
+//        guide_text=(TextView)findViewById(R.id.guide_text);
+//        guide_num=(TextView)findViewById(R.id.guide_num);
+//        distance_view=(TextView)findViewById(R.id.distance);
+//        guide_text.setText(staticValues.walk_guide.get(cur_point));
+//        from=new Location("From");
+//        to=new Location("To");
+//        mHandler=new Handler();
     }
     protected void onResume() {
         if (mGoogleApiClient == null) {
@@ -129,30 +123,30 @@ public class test_activity extends FragmentActivity implements OnMapReadyCallbac
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 0);
         }
 
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-        if (mLastLocation != null) {
-            Log.e("위치 잘 받아옴", "온커넥트");
-            Log.e("받아온 경도", Double.toString(mLastLocation.getLatitude()));
-            Log.e("받아온 위도", Double.toString(mLastLocation.getLongitude()));
-
-            //일단 스태틱에 위치 저장, 이게 불필요한지 확인해서 제거할 것
-            staticValues.mLastLat = mLastLocation.getLatitude();
-            staticValues.mLastLong = mLastLocation.getLongitude();
-
-            LatLng cur_location = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-            Log.e("mMap검사", mMap.toString());
-            mMarker=mMap.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
-            for(int i=0;i<staticValues.walk_google_poly.size();i++){
-                mMap.addMarker(new MarkerOptions().position(staticValues.walk_google_poly.get(i)).icon(BitmapDescriptorFactory.fromResource(R.drawable.pin)));
-            }
-            for(int i=0;i<staticValues.walk_guide_poly.size();i++){
-                mMap.addMarker(new MarkerOptions().position(staticValues.walk_guide_poly.get(i)).icon(BitmapDescriptorFactory.fromResource(R.drawable.bluepin)));
-            }
-
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location, 15));
-            mMap.addPolyline(staticValues.cur_poly);
-            virtual_tracking();
-        }
+//        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+//        if (mLastLocation != null) {
+//            Log.e("위치 잘 받아옴", "온커넥트");
+//            Log.e("받아온 경도", Double.toString(mLastLocation.getLatitude()));
+//            Log.e("받아온 위도", Double.toString(mLastLocation.getLongitude()));
+//
+//            //일단 스태틱에 위치 저장, 이게 불필요한지 확인해서 제거할 것
+//            staticValues.mLastLat = mLastLocation.getLatitude();
+//            staticValues.mLastLong = mLastLocation.getLongitude();
+//
+//            LatLng cur_location = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+//            Log.e("mMap검사", mMap.toString());
+//            mMarker=mMap.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
+//            for(int i=0;i<staticValues.walk_google_poly.size();i++){
+//                mMap.addMarker(new MarkerOptions().position(staticValues.walk_google_poly.get(i)).icon(BitmapDescriptorFactory.fromResource(R.drawable.pin)));
+//            }
+//            for(int i=0;i<staticValues.walk_guide_poly.size();i++){
+//                mMap.addMarker(new MarkerOptions().position(staticValues.walk_guide_poly.get(i)).icon(BitmapDescriptorFactory.fromResource(R.drawable.bluepin)));
+//            }
+//
+//            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location, 15));
+//            mMap.addPolyline(staticValues.cur_poly);
+//            virtual_tracking();
+//        }
     }
 
     @Override
@@ -171,52 +165,52 @@ public class test_activity extends FragmentActivity implements OnMapReadyCallbac
     }
 
     public void virtual_tracking(){
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try{
-                    for(int i=0;i<staticValues.walk_google_poly.size();i++){
-                        Log.e("돌긴하니","11");
-                        Thread.sleep(1000);
-                        nextPosition=staticValues.walk_google_poly.get(i);
-                        if(check_postion(nextPosition)){
-                            mHandler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    distance_view.setText(distance+"m");
-                                    guide_num.setText(Integer.toString(cur_point));
-                                    mMarker.remove();
-                                    mMarker=mMap.addMarker(new MarkerOptions().position(nextPosition));
-                                    guide_text.setText(staticValues.walk_guide.get(cur_point-1));
-                                    return;
-                                }
-                            });
-                        }
-                        else{
-                            mHandler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    distance_view.setText(distance+"m");
-                                    mMarker.remove();
-                                    mMarker=mMap.addMarker(new MarkerOptions().position(nextPosition));
-                                    return;
-                                }
-                            });
-                        }
-
-                    }
-                }
-                catch (Exception e){
-                    e.printStackTrace();
-                }
-            }
-        });
+//        AsyncTask.execute(new Runnable() {
+//            @Override
+//            public void run() {
+//                try{
+//                    for(int i=0;i<staticValues.walk_google_poly.size();i++){
+//                        Log.e("돌긴하니","11");
+//                        Thread.sleep(1000);
+//                        nextPosition=staticValues.walk_google_poly.get(i);
+//                        if(check_postion(nextPosition)){
+//                            mHandler.post(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    distance_view.setText(distance+"m");
+//                                    guide_num.setText(Integer.toString(cur_point));
+//                                    mMarker.remove();
+//                                    mMarker=mMap.addMarker(new MarkerOptions().position(nextPosition));
+//                                    guide_text.setText(staticValues.walk_guide.get(cur_point-1));
+//                                    return;
+//                                }
+//                            });
+//                        }
+//                        else{
+//                            mHandler.post(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    distance_view.setText(distance+"m");
+//                                    mMarker.remove();
+//                                    mMarker=mMap.addMarker(new MarkerOptions().position(nextPosition));
+//                                    return;
+//                                }
+//                            });
+//                        }
+//
+//                    }
+//                }
+//                catch (Exception e){
+//                    e.printStackTrace();
+//                }
+//            }
+//        });
     }
     public boolean check_postion(LatLng cur_position){
         from.setLatitude(cur_position.latitude);
-        from.setLongitude(cur_position.longitude);
-        to.setLatitude(staticValues.walk_guide_poly.get(cur_point).latitude);
-        to.setLongitude(staticValues.walk_guide_poly.get(cur_point).longitude);
+//        from.setLongitude(cur_position.longitude);
+//        to.setLatitude(staticValues.walk_guide_poly.get(cur_point).latitude);
+//        to.setLongitude(staticValues.walk_guide_poly.get(cur_point).longitude);
         distance=from.distanceTo(to);
         if(distance<5){
             cur_point+=1;

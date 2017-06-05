@@ -45,9 +45,7 @@ import static com.example.junny.followme_realbeta.staticValues.middle_point;
 import static com.example.junny.followme_realbeta.staticValues.to_lat;
 import static com.example.junny.followme_realbeta.staticValues.to_long;
 import static com.example.junny.followme_realbeta.staticValues.to_title;
-import static com.example.junny.followme_realbeta.staticValues.walk_google_poly;
-import static com.example.junny.followme_realbeta.staticValues.walk_guide;
-import static com.example.junny.followme_realbeta.staticValues.walk_guide_poly;
+import static com.example.junny.followme_realbeta.staticValues.walk_guide_text;
 
 public class show_route_activity extends FragmentActivity implements OnMapReadyCallback {
     private TextView start_point_view;
@@ -404,12 +402,12 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
             public void onFindPathData(TMapPolyLine tMapPolyLine) {
 
                 ArrayList<TMapPoint> tmap_poly = tMapPolyLine.getLinePoint();
-                staticValues.walk_google_poly=new ArrayList<LatLng>();
+                staticValues.walk_all_latlng=new ArrayList<LatLng>();
                 walkOptions = new PolylineOptions();
                 for (int i = 0; i < tmap_poly.size(); i++) {
                     TMapPoint cur_tpoint = tmap_poly.get(i);
                     walkOptions.add(new LatLng(cur_tpoint.getLatitude(), cur_tpoint.getLongitude()));
-                    staticValues.walk_google_poly.add(new LatLng(cur_tpoint.getLatitude(), cur_tpoint.getLongitude()));
+                    staticValues.walk_all_latlng.add(new LatLng(cur_tpoint.getLatitude(), cur_tpoint.getLongitude()));
                 }
                 AsyncTask.execute(new Runnable() {
                     @Override
@@ -456,8 +454,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                         features=org_obj.getJSONArray("features");
 
                         walk_poly_options = new PolylineOptions();
-                        staticValues.walk_guide_poly=new ArrayList<LatLng>();
-                        staticValues.walk_guide=new ArrayList<String>();
+                        staticValues.walk_guide_latlng=new ArrayList<LatLng>();
+                        walk_guide_text=new ArrayList<String>();
 
                         for(int i=0;i<features.length();i++){
                             JSONObject cur_obj=features.getJSONObject(i);
@@ -472,8 +470,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                     LatLng cur_point=new LatLng(Double.parseDouble(res[1]),Double.parseDouble(res[0]));
 
                                     walk_poly_options.add(cur_point);
-                                    staticValues.walk_guide_poly.add(cur_point);
-                                    staticValues.walk_guide.add(cur_prop.getString("description"));
+                                    staticValues.walk_guide_latlng.add(cur_point);
+                                    walk_guide_text.add(cur_prop.getString("description"));
                                 }
                             }
                         }
@@ -486,9 +484,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                     String walk_time=(new JSONObject(features.getJSONObject(0).getString("properties"))).getString("totalTime");
                                     int added_walk_time=Integer.parseInt(walk_time)/60;
 
-                                    String walk_distance=(new JSONObject(features.getJSONObject(0).getString("properties"))).getString("totalDistance");
-                                    float added_walk_distance=(Float.parseFloat(walk_distance)/(float)1000);
-                                    bottom_distance.setText(String.format("%.2f",added_walk_distance)+"km");
+                                    staticValues.distance=Float.parseFloat((new JSONObject(features.getJSONObject(0).getString("properties"))).getString("totalDistance"));
+                                    bottom_distance.setText(String.format("%.2f",(staticValues.distance)/1000.0f)+"km");
                                     bottom_time.setText(added_walk_time+"분");
 
                                 } catch (Exception e) {
@@ -517,16 +514,13 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     }
 
     public void set_camera(View v){
-        if((staticValues.walk_guide_poly!=null)&&(walk_guide!=null)&&(walk_google_poly!=null)&&(staticValues.walk_guide_poly.size()>3)){
+        if((staticValues.walk_guide_latlng!=null)&&(walk_guide_text!=null)&&
+                (staticValues.walk_all_latlng!=null)&&(staticValues.walk_guide_latlng.size()>3)){
             Intent intent=new Intent(show_route_activity.this,ar_activity.class);
             startActivity(intent);
         }
         else{
-            Log.e("가이드 폴리",Integer.toString(walk_google_poly.size()));
-            Log.e("워크 가이드 폴리", Integer.toString(walk_guide_poly.size()));
-            Log.e("설명 개수",Integer.toString(walk_guide.size()));
             Toast.makeText(show_route_activity.this,"경로 정보를 준비중입니다",Toast.LENGTH_LONG).show();
         }
-
     }
 }

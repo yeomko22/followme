@@ -19,28 +19,30 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1">
+            android:layout_weight="1.5">
+
             <TextView
+                android:id="@+id/guide_num"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:id="@+id/guide_num"
+                android:gravity="center"
                 android:text="1"
                 android:textColor="@color/black"
-                android:textSize="15dp"
-                android:gravity="center"/>
+                android:textSize="15dp" />
         </LinearLayout>
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="9">
+            android:layout_weight="8.5">
+
             <TextView
+                android:id="@+id/guide_text"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:id="@+id/guide_text"
+                android:gravity="center_vertical"
                 android:text="길 안내를 준비 중입니다"
                 android:textColor="@color/black"
-                android:textSize="15dp"
-                android:gravity="center_vertical"/>
+                android:textSize="15dp" />
         </LinearLayout>
     </LinearLayout>
 
@@ -48,7 +50,7 @@
         android:id="@+id/view_pager"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="7">
+        android:layout_weight="7.5">
 
     </android.support.v4.view.ViewPager>
 
@@ -56,22 +58,15 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="2"
+        android:layout_weight="1.5"
         android:orientation="horizontal"
         android:weightSum="10">
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="3"
-            android:padding="5dp">
-
-        </LinearLayout>
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="5"
+            android:layout_weight="8"
             android:orientation="vertical"
             android:padding="10dp"
             android:weightSum="2">
@@ -80,37 +75,44 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:gravity="bottom">
+                android:gravity="center_vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:text="남은 거리"
+                    android:text="도착지 : "
                     android:textColor="@color/black"
-                    android:textSize="30dp" />
+                    android:textSize="20dp" />
+
+                <TextView
+                    android:id="@+id/ar_destination"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="예상 도착지"
+                    android:textColor="@color/black"
+                    android:textSize="20dp" />
+
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:gravity="bottom">
+                android:gravity="center_vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:text="150m"
-                    android:textColor="@color/background"
-                    android:textSize="25dp" />
+                    android:text="남은 거리 : "
+                    android:textColor="@color/black"
+                    android:textSize="20dp" />
 
                 <TextView
+                    android:id="@+id/ar_distance"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="15dp"
-                    android:gravity="center_vertical"
-                    android:text="15분"
+                    android:text="예상 남은 거리"
+                    android:textColor="@color/black"
                     android:textSize="20dp" />
 
             </LinearLayout>
@@ -120,24 +122,28 @@
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="2"
+            android:layout_weight="1.5"
             android:gravity="center">
 
             <LinearLayout
                 android:layout_width="50dp"
                 android:layout_height="50dp"
                 android:background="@drawable/line_background"
-                android:padding="10dp">
+                android:padding="2dp">
 
-                <ImageView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:src="@drawable/map"
-                    android:onClick="change_fragment"/>
+                    android:background="@drawable/line_background2"
+                    android:padding="10dp">
 
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:onClick="change_fragment"
+                        android:src="@drawable/map" />
+                </LinearLayout>
             </LinearLayout>
-
-
         </LinearLayout>
 
     </LinearLayout>

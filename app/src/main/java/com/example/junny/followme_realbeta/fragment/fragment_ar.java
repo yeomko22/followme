@@ -30,7 +30,7 @@ import java.util.List;
 public class fragment_ar extends android.support.v4.app.Fragment implements SurfaceHolder.Callback{
     private CameraDevice camera;
     private SurfaceView mCameraView;
-    private ImageView arrow;
+    public ImageView arrow;
     private SurfaceHolder mCameraHolder;
     private Camera mCamera;
 

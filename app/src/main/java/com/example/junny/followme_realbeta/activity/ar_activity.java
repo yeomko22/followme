@@ -4,10 +4,13 @@ import android.Manifest;
 import android.app.Application;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.hardware.camera2.CameraDevice;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -16,11 +19,9 @@ import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
 import android.util.Log;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.example.junny.followme_realbeta.R;
 import com.example.junny.followme_realbeta.fragment.fragment_ar;
@@ -42,42 +43,68 @@ import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
 public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener{
 
-    private CameraDevice camera;
-    private SurfaceView mCameraView;
-    private SurfaceHolder mCameraHolder;
-    private android.hardware.Camera mCamera;
-    private Button mStart;
-    private ImageView arrow;
     private GoogleMap mMap;
     private LocationRequest mLocationRequest;
     private GoogleApiClient mGoogleApiClient;
     private ViewPager vp;
     private LatLng cur_location;
+    private LatLng nextPosition;
+    private Handler mHandler;
+    private TextView guide_text;
+    private TextView guide_num;
+    private TextView ar_destination;
+    private TextView ar_distance;
+    private fragment_ar fa;
+    private fragment_map fm;
+    private int cur_point=0;
+    private float past_distance;
+    private ImageView arrow;
+    private float bearing=0;
+    private float cur_zio=0;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.ar_activity);
+        mHandler=new Handler();
         vp=(ViewPager)findViewById(R.id.view_pager);
         vp.setAdapter(new pagerAdapter(getSupportFragmentManager()));
         vp.setCurrentItem(0);
 
+        guide_text=(TextView)findViewById(R.id.guide_text);
+        guide_num=(TextView)findViewById(R.id.guide_num);
+        ar_destination=(TextView)findViewById(R.id.ar_destination);
+        ar_destination.setText(staticValues.to_title);
+        ar_distance=(TextView)findViewById(R.id.ar_distance);
+
+        if(staticValues.distance>1000){
+            ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
+        }
+        else{
+            ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
+        }
+        guide_num.setText("1");
+        guide_text.setText(staticValues.walk_guide_text.get(0));
+
         SensorManager mSensorManager=(SensorManager)getSystemService(Application.SENSOR_SERVICE);
         Sensor sensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
-//        SensorEventListener mSensorListener= new SensorEventListener() {
-//            @Override
-//            public void onSensorChanged(SensorEvent event) {
-//                Log.e("회전 감지 : ",Float.toString(event.values[1]*100));
-//                Log.e("정확도 : ",Float.toString(event.values[3]*100));
-//                arrow.setRotation(event.values[1]*200);
-//            }
-//
-//            @Override
-//            public void onAccuracyChanged(Sensor sensor, int accuracy) {
-//                Log.e("정확도 변화","11");
-//            }
-//        };
-//        mSensorManager.registerListener(mSensorListener,sensor,SensorManager.SENSOR_DELAY_UI);
+        SensorEventListener mSensorListener= new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+                if(event.values[3]>0.8){
+                    Log.e("회전 감지 : ",Float.toString(event.values[1]*100));
+                    Log.e("정확도 : ",Float.toString(event.values[3]*100));
+                    cur_zio=event.values[3]*100;
+                }
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+                Log.e("정확도 변화","11");
+            }
+        };
+        mSensorManager.registerListener(mSensorListener,sensor,SensorManager.SENSOR_DELAY_UI);
     }
     class pagerAdapter extends FragmentStatePagerAdapter
     {
@@ -91,9 +118,15 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
             switch(position)
             {
                 case 0:
-                    return new fragment_ar();
+                    if(fa==null){
+                        fa=new fragment_ar();
+                    }
+                    return fa;
                 case 1:
-                    return new fragment_map();
+                    if(fm==null){
+                        fm=new fragment_map();
+                    }
+                    return fm;
                 default:
                     return null;
             }
@@ -118,7 +151,8 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         tMapTapi.setSKPMapAuthentication("4004a4c7-8e67-3c17-88d9-9799c613ecc7");
 
         if (mGoogleApiClient.isConnected()) {
-            start_tracking();
+            Log.e("버츄얼","11");
+//            virtual_tracking();
         }
 
         super.onResume();
@@ -134,10 +168,11 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
                 Log.e("위도 변화",Double.toString(location.getLatitude()));
                 Log.e("경도 변화",Double.toString(location.getLongitude()));
                 mMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())));
-                
-
             }
         });
+    }
+    public void start_virtual(View v){
+        virtual_tracking();
     }
 
     @Override
@@ -201,74 +236,77 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         return cur_location;
     }
 
-//    private void init(){
-//        final int CAMERA_PERMISSION_REQUEST_CODE = 1;
-//        int permissionCheck= ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
-//        if(permissionCheck== PackageManager.PERMISSION_DENIED){
-//            ActivityCompat.requestPermissions(ar_activity.this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
-//        }
-//
-//        mCamera= android.hardware.Camera.open();
-//        mCamera.setDisplayOrientation(90);
-//
-//        mCameraHolder=mCameraView.getHolder();
-//        mCameraHolder.addCallback(this);
-//        mCameraHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-//    }
-//
-//    @Override
-//    public void surfaceCreated(SurfaceHolder holder) {
-//        try{
-//            if(mCamera == null){
-//                mCamera.setPreviewDisplay(holder);
-//                mCamera.startPreview();
-//            }
-//        }catch(IOException e){
-//            StringWriter sw=new StringWriter();
-//            e.printStackTrace(new PrintWriter(sw));
-//            String exceptionAsString=sw.toString();
-//            Log.e("IO 예외 발생",exceptionAsString);
-//        }
-//    }
-//
-//    @Override
-//    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-//        if(mCameraHolder.getSurface()==null){
-//            return;
-//        }
-//        try{
-//            mCamera.stopPreview();
-//        }catch (Exception e){
-//            StringWriter sw=new StringWriter();
-//            e.printStackTrace(new PrintWriter(sw));
-//            String exceptionAsString=sw.toString();
-//            Log.e("IO 예외 발생",exceptionAsString);
-//        }
-//        Camera.Parameters parameters=mCamera.getParameters();
-//        List<String> focusModes = parameters.getSupportedFocusModes();
-//        if(focusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)){
-//            parameters.setFocusMode(Camera.Parameters.FLASH_MODE_AUTO);
-//        }
-//        mCamera.setParameters(parameters);
-//
-//        try{
-//            mCamera.setPreviewDisplay(mCameraHolder);
-//            mCamera.startPreview();
-//        }
-//        catch(Exception e){
-//            StringWriter sw=new StringWriter();
-//            e.printStackTrace(new PrintWriter(sw));
-//            String exceptionAsString=sw.toString();
-//            Log.e("IO 예외 발생",exceptionAsString);
-//        }
-//    }
-//
-//    @Override
-//    public void surfaceDestroyed(SurfaceHolder holder) {
-//        if(mCamera != null){
-//            mCamera.stopPreview();
-//            mCamera.release();
-//            mCamera=null;
-//        }
-//    }
+
+
+    public void virtual_tracking(){
+        Log.e("트랙킹","11");
+        AsyncTask.execute(new Runnable() {
+            @Override
+            public void run() {
+                Log.e("런","11");
+                try{
+                    for(int i=0;i<staticValues.walk_all_latlng.size();i++){
+                        Log.e("돌긴하니","11");
+                        Thread.sleep(2000);
+                        nextPosition=staticValues.walk_all_latlng.get(i);
+
+                        mHandler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                if(check_postion(nextPosition)){
+                                    guide_num.setText(Integer.toString(cur_point));
+                                    guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
+
+                                }
+                                if(staticValues.distance>1000){
+                                    ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
+                                }
+                                else{
+                                    ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
+                                }
+                                fm.myPosition.remove();
+                                fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(nextPosition));
+                                return;
+                            }
+                        });
+                    }
+                }
+                catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+    public boolean check_postion(LatLng cur_position){
+        Location from=new Location("from");
+        Location to=new Location("to");
+        Location next=new Location("next");
+        from.setLatitude(cur_position.latitude);
+        from.setLongitude(cur_position.longitude);
+        to.setLatitude(staticValues.walk_guide_latlng.get(cur_point).latitude);
+        to.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
+        //이전 거리와 지금 거리의 차이 - 이동 거리 - 이걸 토탈에서 빼주자
+        float distance=from.distanceTo(to);
+        bearing=from.bearingTo(to);
+        Log.e("베어링", Float.toString(bearing));
+        fa.arrow.setRotation(bearing-cur_zio);
+        if(distance<5){
+            cur_point+=1;
+            if(staticValues.walk_guide_latlng.size()>cur_point){
+                //포인트 지점에 도착하면, 해당 지점과 시작점 사이의 거리만큼을 빼주면 된다 현재 거리와 별개 전체 거리에서
+                //이전 키포인트에서 지금 키포인트사이의 거리만큼을 빼준다? 노노 직선거리잖아 직선과 곡선 차이때문에 나는 차이일 듯
+                next.setLatitude(staticValues.walk_guide_latlng.get(cur_point).latitude);
+                next.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
+                past_distance=from.distanceTo(next);
+            }
+            return true;
+        }
+        else{
+            Log.e("이동한 거리",Float.toString(past_distance-distance));
+            staticValues.distance-=(past_distance-distance);
+            past_distance=distance;
+            return false;
+        }
+    }
+
 }

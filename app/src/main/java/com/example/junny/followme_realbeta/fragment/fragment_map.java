@@ -8,17 +8,17 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.example.junny.followme_realbeta.R;
-import com.example.junny.followme_realbeta.activity.ar_activity;
 import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import static com.example.junny.followme_realbeta.R.id.distance;
+import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
 import static com.example.junny.followme_realbeta.staticValues.middle_point;
+import static com.example.junny.followme_realbeta.staticValues.to_latlng;
 
 /**
  * Created by junny on 2017. 6. 2..
@@ -26,14 +26,13 @@ import static com.example.junny.followme_realbeta.staticValues.middle_point;
 
 public class fragment_map extends android.support.v4.app.Fragment implements OnMapReadyCallback{
     public GoogleMap mMap;
-    private ar_activity mActivity;
+    public Marker myPosition;
     public fragment_map() {
     }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mActivity=(ar_activity)getActivity();
     }
 
     @Nullable
@@ -48,56 +47,59 @@ public class fragment_map extends android.support.v4.app.Fragment implements OnM
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap=googleMap;
-        mMap.addMarker(new MarkerOptions().position(new LatLng(staticValues.mLastLat,staticValues.mLastLong)).title("내 위치"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(staticValues.mLastLat,staticValues.mLastLong), 13));
+        myPosition=mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치"));
+        mMap.addMarker(new MarkerOptions().position(to_latlng).title("도착점"));
+        set_zoom();
         mMap.addPolyline(staticValues.cur_poly);
+//        ((ar_activity)getActivity()).virtual_tracking();
     }
     public void set_zoom(){
-        if(distance<100){
+        Log.e("현재의 직선 거리",Float.toString(staticValues.distance));
+        if(staticValues.distance<100){
             Log.e("직선 거리","100 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,19));
         }
-        else if(distance<300){
+        else if(staticValues.distance<300){
             Log.e("직선 거리","300 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,17));
         }
 
-        else if(distance<500){
+        else if(staticValues.distance<500){
             Log.e("직선 거리","500 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,16));
         }
 
-        else if(distance<1000){
+        else if(staticValues.distance<1000){
             Log.e("직선 거리","1000 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,15));
         }
 
-        else if(distance<2000){
+        else if(staticValues.distance<2000){
             Log.e("직선 거리","2000 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,14));
         }
-        else if(distance<3500){
+        else if(staticValues.distance<3500){
             Log.e("직선 거리","3500 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,13));
         }
-        else if(distance<7500){
+        else if(staticValues.distance<7500){
             Log.e("직선 거리","7500 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,12));
         }
-        else if(distance<15000){
-            Log.e("직선 거리","10000 미만");
+        else if(staticValues.distance<15000){
+            Log.e("직선 거리","15000 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,11));
         }
-        else if(distance<30000){
-            Log.e("직선 거리","20000 미만");
+        else if(staticValues.distance<30000){
+            Log.e("직선 거리","30000 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,10));
         }
-        else if(distance<40000){
-            Log.e("직선 거리","20000 미만");
+        else if(staticValues.distance<40000){
+            Log.e("직선 거리","40000 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,9));
         }
-        else if(distance<80000){
-            Log.e("직선 거리","50000 미만");
+        else if(staticValues.distance<80000){
+            Log.e("직선 거리","80000 미만");
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(middle_point,8));
         }
         else{
