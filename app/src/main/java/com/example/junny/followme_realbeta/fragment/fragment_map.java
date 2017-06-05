@@ -13,6 +13,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -47,7 +48,7 @@ public class fragment_map extends android.support.v4.app.Fragment implements OnM
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap=googleMap;
-        myPosition=mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치"));
+        myPosition=mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치").icon(BitmapDescriptorFactory.fromResource(R.drawable.green_arrow)));
         mMap.addMarker(new MarkerOptions().position(to_latlng).title("도착점"));
         set_zoom();
         mMap.addPolyline(staticValues.cur_poly);

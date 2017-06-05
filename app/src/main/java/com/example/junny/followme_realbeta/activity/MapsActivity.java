@@ -13,6 +13,8 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -243,11 +245,103 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void reset_curlocation(View v){
+        Animation anim = AnimationUtils.loadAnimation(getApplicationContext(),R.anim.rotate);
+        v.startAnimation(anim);
+
         if(ContextCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},0);
         }
-        mLastLocation=LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-        if(mLastLocation!=null){
+        if(mLastLocation==null){
+            mLastLocation=LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+            if(mLastLocation!=null){
+                Log.e("위치 잘 받아옴","온커넥트");
+                Log.e("받아온 경도", Double.toString(mLastLocation.getLatitude()));
+                Log.e("받아온 위도", Double.toString(mLastLocation.getLongitude()));
+
+                //일단 스태틱에 위치 저장, 이게 불필요한지 확인해서 제거할 것
+                staticValues.mLastLat=mLastLocation.getLatitude();
+                staticValues.mLastLong=mLastLocation.getLongitude();
+                staticValues.mLastLatLong=new LatLng(staticValues.mLastLat,staticValues.mLastLong);
+
+
+                final LatLng cur_location=new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
+                Log.e("mMap검사", mMap.toString());
+                mMap.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
+
+                AsyncTask.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            //https://maps.googleapis.com/maps/api/geocode/json?latlng=40.714224,-73.961452&key=YOUR_API_KEY
+                            String tes_url="https://maps.googleapis.com/maps/api/geocode/json?latlng="+staticValues.mLastLat+","
+                                    +staticValues.mLastLong+"&key=AIzaSyC2KPG-dhy-IqT1iBhb6W4N3WC1od4qAN0&language=ko";
+                            URL url = new URL(tes_url);
+                            Log.e("url",tes_url);
+
+                            conn = (HttpURLConnection) url.openConnection();
+                            conn.setRequestMethod("GET");
+                            conn.setDoInput(true);
+                            conn.setDoOutput(true);
+                            conn.setConnectTimeout(2000);
+                            conn.connect();
+
+                            if(conn.getResponseCode()==200){
+                                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                                StringBuilder sb = new StringBuilder();
+                                String line = null;
+
+                                while ((line=br.readLine()) != null) {
+                                    sb.append(line);
+                                }
+                                JSONObject org_obj=new JSONObject(sb.toString());
+                                JSONArray result_array=new JSONArray(org_obj.getString("results"));
+                                JSONObject target_obj=result_array.getJSONObject(0);
+                                features=new JSONArray(target_obj.getString("address_components"));
+
+                                mHandler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        try {
+                                            staticValues.cur_address=features.getJSONObject(2).getString("short_name")+" "+features.getJSONObject(1).getString("short_name")+" "+features.getJSONObject(0).getString("short_name");
+                                            if(cur_address.length()>15){
+                                                start_point.setText(staticValues.cur_address.substring(0,10)+"...");
+                                            }
+                                            else{
+                                                start_point.setText(cur_address);
+                                            }
+                                        } catch (Exception e) {
+                                            StringWriter sw = new StringWriter();
+                                            e.printStackTrace(new PrintWriter(sw));
+                                            String exceptionAsStrting = sw.toString();
+                                            Log.e("예외발생", exceptionAsStrting);
+                                        }
+                                        return;
+                                    }
+                                });
+                            }
+                            else{
+                                Log.e("유알엘",tes_url);
+                                Log.e("실패코드", Integer.toString(conn.getResponseCode()));
+                                Log.e("실패코드", conn.getResponseMessage());
+                            }
+                        } catch (Exception e) {
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String exceptionAsStrting = sw.toString();
+                            Log.e("예외발생", exceptionAsStrting);
+                        }
+                    }
+                });
+            }
+            else{
+                Log.e("위치 못잡음","얘 정신 못차린다");
+
+                LatLng seoul=new LatLng(37.5665, 126.9780);
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(seoul,10));
+            }
+        }
+        else{
             Log.e("위치 잘 받아옴","온커넥트");
             Log.e("받아온 경도", Double.toString(mLastLocation.getLatitude()));
             Log.e("받아온 위도", Double.toString(mLastLocation.getLongitude()));
@@ -262,77 +356,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Log.e("mMap검사", mMap.toString());
             mMap.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
-
-            AsyncTask.execute(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        //https://maps.googleapis.com/maps/api/geocode/json?latlng=40.714224,-73.961452&key=YOUR_API_KEY
-                        String tes_url="https://maps.googleapis.com/maps/api/geocode/json?latlng="+staticValues.mLastLat+","
-                                +staticValues.mLastLong+"&key=AIzaSyC2KPG-dhy-IqT1iBhb6W4N3WC1od4qAN0&language=ko";
-                        URL url = new URL(tes_url);
-                        Log.e("url",tes_url);
-
-                        conn = (HttpURLConnection) url.openConnection();
-                        conn.setRequestMethod("GET");
-                        conn.setDoInput(true);
-                        conn.setDoOutput(true);
-                        conn.setConnectTimeout(2000);
-                        conn.connect();
-
-                        if(conn.getResponseCode()==200){
-                            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-                            StringBuilder sb = new StringBuilder();
-                            String line = null;
-
-                            while ((line=br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            JSONObject org_obj=new JSONObject(sb.toString());
-                            JSONArray result_array=new JSONArray(org_obj.getString("results"));
-                            JSONObject target_obj=result_array.getJSONObject(0);
-                            features=new JSONArray(target_obj.getString("address_components"));
-
-                            mHandler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        staticValues.cur_address=features.getJSONObject(2).getString("short_name")+" "+features.getJSONObject(1).getString("short_name")+" "+features.getJSONObject(0).getString("short_name");
-                                        if(cur_address.length()>15){
-                                            start_point.setText(staticValues.cur_address.substring(0,10)+"...");
-                                        }
-                                        else{
-                                            start_point.setText(cur_address);
-                                        }
-                                    } catch (Exception e) {
-                                        StringWriter sw = new StringWriter();
-                                        e.printStackTrace(new PrintWriter(sw));
-                                        String exceptionAsStrting = sw.toString();
-                                        Log.e("예외발생", exceptionAsStrting);
-                                    }
-                                    return;
-                                }
-                            });
-                        }
-                        else{
-                            Log.e("유알엘",tes_url);
-                            Log.e("실패코드", Integer.toString(conn.getResponseCode()));
-                            Log.e("실패코드", conn.getResponseMessage());
-                        }
-                    } catch (Exception e) {
-                        StringWriter sw = new StringWriter();
-                        e.printStackTrace(new PrintWriter(sw));
-                        String exceptionAsStrting = sw.toString();
-                        Log.e("예외발생", exceptionAsStrting);
-                    }
-                }
-            });
-        }
-        else{
-            Log.e("위치 못잡음","얘 정신 못차린다");
-
-            LatLng seoul=new LatLng(37.5665, 126.9780);
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(seoul,10));
         }
     }
 }
