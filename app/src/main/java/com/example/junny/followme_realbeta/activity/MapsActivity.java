@@ -22,6 +22,7 @@ import com.example.junny.followme_realbeta.R;
 import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -59,6 +60,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private android.os.Handler mHandler;
     private JSONArray features;
     private Marker mMarker;
+    private LocationListener locationListener;
 
 
     @Override
@@ -131,11 +133,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Add a marker in Sydney and move the camera
     }
 
+
     @Override
     public void onConnected(@Nullable Bundle connnectionHint) {
         if(ContextCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},0);
         }
+        createLocationRequest();
         staticValues.mLastLocation=LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if(mLastLocation!=null){
             Log.e("위치 잘 받아옴","온커넥트");
@@ -151,6 +155,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Log.e("mMap검사", mMap.toString());
             mMap.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
+
 
             AsyncTask.execute(new Runnable() {
                 @Override

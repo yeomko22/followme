@@ -23,6 +23,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.junny.followme_realbeta.R;
 import com.example.junny.followme_realbeta.fragment.fragment_ar;
@@ -42,6 +43,7 @@ import com.skp.Tmap.TMapTapi;
 
 import java.util.ArrayList;
 
+import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
 import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
 
 public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
@@ -65,7 +67,7 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
     private ImageView arrow;
     private float bearing=0;
     private GeomagneticField geomagneticField;
-//    private LocationListener locationListener;
+    private LocationListener locationListener;
     private SensorManager mSensorManager;
     private Sensor mAccelSensor;
     private Sensor mMagneticSensor;
@@ -76,6 +78,11 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
     private final float[] mOrientationAngles = new float[3];
     private ArrayList<Float> azimuth=new ArrayList<Float>();
     private float azi_sum=0;
+    private float added_degree=0;
+    private int count=0;
+    private float last_angle;
+
+    private float cur_accuracy;
 
 
     @Override
@@ -86,17 +93,19 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         mAccelSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mMagneticSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-//        locationListener=new LocationListener(){
+
+//        AsyncTask.execute(new Runnable() {
 //            @Override
-//            public void onLocationChanged(Location location) {
-//                geomagneticField=new GeomagneticField(
-//                        Double.valueOf(location.getLatitude()).floatValue(),
-//                        Double.valueOf(location.getLongitude()).floatValue(),
-//                        Double.valueOf(location.getAltitude()).floatValue(),
-//                        System.currentTimeMillis());
-//                Log.e("상대 각도", Float.toString(geomagneticField.getDeclination()));
+//            public void run() {
+//                try{
+//                    Thread.sleep(2000);
+//                    updateOrientationAngles();
+//                }
+//                catch(Exception e){
+//                    e.printStackTrace();
+//                }
 //            }
-//        };
+//        });
 
         vp=(ViewPager)findViewById(R.id.view_pager);
         vp.setAdapter(new pagerAdapter(getSupportFragmentManager()));
@@ -116,7 +125,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         }
         guide_num.setText("1");
         guide_text.setText(staticValues.walk_guide_text.get(0));
-
     }
     protected void onResume() {
         if (mGoogleApiClient == null) {
@@ -148,6 +156,7 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
     }
     @Override
     protected void onPause(){
+        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, locationListener);
         mSensorManager.unregisterListener(this);
         Log.e("센서 해지","11");
         super.onPause();
@@ -178,25 +187,55 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         }
 
         if(azimuth.size()<10){
-            azimuth.add(mOrientationAngles[0]);
-            azi_sum+=mOrientationAngles[0];
+            float added_degree=(float)Math.toDegrees(mOrientationAngles[0]);
+            azimuth.add(added_degree);
+            azi_sum+=added_degree;
         }
         else{
-            float degree=(float)Math.toDegrees(azi_sum/10.0);
-            if(degree<0){degree+=360;}
-            Log.e("아지무스 z",Float.toString(degree));
-            fa.arrow.setRotation(degree);
+            //화살표가 사라지는 이유는 필터에서 반환값이 NAN이 나와서 없어지는 것, 그래서 우선 필터를 제외시킴
+//            Log.e("필터링 전",Float.toString(azi_sum/10.0f));
+//            Log.e("필터링 후", Float.toString(filter()));
+//            fa.arrow.setRotation(filter());
+            float rotation_angle=(azi_sum/10.0f);
+            if(rotation_angle<0){rotation_angle=rotation_angle+360;}
+//            Log.e("돌아가는 각도",Float.toString(rotation_angle));
+
+            if(last_angle==0){
+                last_angle=rotation_angle;
+            }
+            if(Math.abs(rotation_angle-last_angle)<90){
+                last_angle=rotation_angle;
+                fa.arrow.setRotation(staticValues.last_bearing-rotation_angle);
+            }
+            else{
+//                Log.e("필터 작동",Float.toString(rotation_angle));
+            }
             azimuth.clear();
             azi_sum=0;
+            count+=1;
         }
-
         // "mOrientationAngles" now has up-to-date information.
     }
+//    public float filter(){
+//        float cur_avg=azi_sum/10.0f;
+//        float new_sum=0;
+//        float count=0;
+//        for(int i=0;i<azimuth.size();i++){
+//            if(Math.abs(azimuth.get(i)-cur_avg)>40){
+//                Log.e("필터 작동",Float.toString(azimuth.get(i)));
+//            }
+//            else{
+//                new_sum+=azimuth.get(i);
+//                count+=1;
+//            }
+//        }
+//        return new_sum/count;
+//    }
 
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        Log.e("정확도 변함", Integer.toString(accuracy));
+//        Log.e("정확도 변함", Integer.toString(accuracy));
     }
 
     class pagerAdapter extends FragmentStatePagerAdapter
@@ -231,34 +270,111 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         }
     }
 
-    public void start_tracking(){
-        createLocationRequest();
-        if (ContextCompat.checkSelfPermission(ar_activity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
-        }
-        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, new LocationListener() {
-            @Override
-            public void onLocationChanged(Location location) {
-                Log.e("위도 변화",Double.toString(location.getLatitude()));
-                Log.e("경도 변화",Double.toString(location.getLongitude()));
-                mMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())));
-            }
-        });
+    protected void createLocationRequest() {
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(10000);
+        mLocationRequest.setFastestInterval(5000);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
+
+    class mLoactionListener implements LocationListener{
+        @Override
+        public void onLocationChanged(Location location) {
+            cur_accuracy=location.getAccuracy();
+            Log.e("정확도",Float.toString(cur_accuracy));
+            if(cur_accuracy>0&&cur_accuracy<20){
+                Log.e("유효","11");
+                staticValues.mLastLocation=location;
+                mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
+                staticValues.mLastLat=location.getLatitude();
+                staticValues.mLastLong=location.getLongitude();
+
+                if(check_position(mLastLatLong)){
+                    guide_num.setText(Integer.toString(cur_point));
+                    guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
+
+                }
+                if(staticValues.distance>1000){
+                    ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
+                }
+                else{
+                    ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
+                }
+                fm.myPosition.remove();
+                fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(mLastLatLong));
+                return;
+            }
+            else{
+                Log.e("무효",Float.toString(cur_accuracy));
+                return;
+            }
+        }
+    }
+
+    public boolean check_position(LatLng cur_position){
+        Location from=new Location("from");
+        Location to=new Location("to");
+        Location next=new Location("next");
+        from.setLatitude(cur_position.latitude);
+        from.setLongitude(cur_position.longitude);
+        to.setLatitude(staticValues.walk_guide_latlng.get(cur_point).latitude);
+        to.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
+        //이전 거리와 지금 거리의 차이 - 이동 거리 - 이걸 토탈에서 빼주자
+        float distance=from.distanceTo(to);
+        if(distance<15){
+            Toast.makeText(ar_activity.this, "주요 포인트 도착",Toast.LENGTH_LONG).show();
+            cur_point+=1;
+            if(staticValues.walk_guide_latlng.size()>cur_point){
+                //포인트 지점에 도착하면, 해당 지점과 시작점 사이의 거리만큼을 빼주면 된다 현재 거리와 별개 전체 거리에서
+                //이전 키포인트에서 지금 키포인트사이의 거리만큼을 빼준다? 노노 직선거리잖아 직선과 곡선 차이때문에 나는 차이일 듯
+                next.setLatitude(staticValues.walk_guide_latlng.get(cur_point).latitude);
+                next.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
+                past_distance=from.distanceTo(next);
+                staticValues.last_bearing=from.bearingTo(next);
+            }
+            else{
+                Toast.makeText(ar_activity.this,"목적지에 도착했습니다",Toast.LENGTH_LONG).show();
+                LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient,locationListener);
+            }
+            return true;
+        }
+        else{
+            staticValues.distance-=(past_distance-distance);
+            past_distance=distance;
+            return false;
+        }
+    }
+
     public void start_virtual(View v){
         virtual_tracking();
     }
 
     @Override
     public void onLocationChanged(Location location) {
+        Log.e("위도,경도",Double.toString(location.getLatitude())+","+Double.toString(location.getLongitude()));
+        Toast.makeText(ar_activity.this,Float.toString(location.getAccuracy()),Toast.LENGTH_LONG).show();
 
-    }
+        staticValues.mLastLocation=location;
+        mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
+        staticValues.mLastLat=location.getLatitude();
+        staticValues.mLastLong=location.getLongitude();
 
-    protected void createLocationRequest() {
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(10000);
-        mLocationRequest.setFastestInterval(5000);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())));
+
+        if(check_position(nextPosition)){
+            guide_num.setText(Integer.toString(cur_point));
+            guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
+
+        }
+        if(staticValues.distance>1000){
+            ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
+        }
+        else{
+            ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
+        }
+        fm.myPosition.remove();
+        fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(nextPosition).icon(BitmapDescriptorFactory.fromResource(R.drawable.green_arrow)));
+        return;
     }
 
     @Override
@@ -278,8 +394,10 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
             staticValues.mLastLong = mLastLocation.getLongitude();
 
             cur_location = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-
         }
+        createLocationRequest();
+        locationListener=new mLoactionListener();
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, locationListener);
     }
 
 
@@ -306,11 +424,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
             vp.setCurrentItem(0);
         }
     }
-    public LatLng get_curlocation(){
-        return cur_location;
-    }
-
-
 
     public void virtual_tracking(){
         Log.e("트랙킹","11");
@@ -327,10 +440,10 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
                         mHandler.post(new Runnable() {
                             @Override
                             public void run() {
-                                if(check_postion(nextPosition)){
+                                if(cur_point==staticValues.walk_guide_latlng.size()){return;}
+                                if(check_position(nextPosition)){
                                     guide_num.setText(Integer.toString(cur_point));
                                     guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
-
                                 }
                                 if(staticValues.distance>1000){
                                     ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
@@ -351,37 +464,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
                 }
             }
         });
-    }
-    public boolean check_postion(LatLng cur_position){
-        Location from=new Location("from");
-        Location to=new Location("to");
-        Location next=new Location("next");
-        from.setLatitude(cur_position.latitude);
-        from.setLongitude(cur_position.longitude);
-        to.setLatitude(staticValues.walk_guide_latlng.get(cur_point).latitude);
-        to.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
-        //이전 거리와 지금 거리의 차이 - 이동 거리 - 이걸 토탈에서 빼주자
-        float distance=from.distanceTo(to);
-        if(distance<5){
-            cur_point+=1;
-            if(staticValues.walk_guide_latlng.size()>cur_point){
-                //포인트 지점에 도착하면, 해당 지점과 시작점 사이의 거리만큼을 빼주면 된다 현재 거리와 별개 전체 거리에서
-                //이전 키포인트에서 지금 키포인트사이의 거리만큼을 빼준다? 노노 직선거리잖아 직선과 곡선 차이때문에 나는 차이일 듯
-                next.setLatitude(staticValues.walk_guide_latlng.get(cur_point).latitude);
-                next.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
-                past_distance=from.distanceTo(next);
-                bearing=from.bearingTo(next);
-                Log.e("베어링", Float.toString(bearing));
-                fa.arrow.setRotation(bearing);
-            }
-            return true;
-        }
-        else{
-            Log.e("이동한 거리",Float.toString(past_distance-distance));
-            staticValues.distance-=(past_distance-distance);
-            past_distance=distance;
-            return false;
-        }
     }
 
 }

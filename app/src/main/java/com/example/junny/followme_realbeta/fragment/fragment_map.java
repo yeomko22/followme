@@ -50,6 +50,10 @@ public class fragment_map extends android.support.v4.app.Fragment implements OnM
         mMap=googleMap;
         myPosition=mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치").icon(BitmapDescriptorFactory.fromResource(R.drawable.green_arrow)));
         mMap.addMarker(new MarkerOptions().position(to_latlng).title("도착점"));
+
+        for(int i=0;i<staticValues.walk_guide_latlng.size();i++){
+            mMap.addMarker(new MarkerOptions().position(staticValues.walk_guide_latlng.get(i)).icon(BitmapDescriptorFactory.fromResource(R.drawable.bluepin)));
+        }
         set_zoom();
         mMap.addPolyline(staticValues.cur_poly);
 //        ((ar_activity)getActivity()).virtual_tracking();

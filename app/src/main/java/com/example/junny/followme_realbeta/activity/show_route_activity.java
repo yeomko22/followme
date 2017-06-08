@@ -57,6 +57,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     private TextView bottom_time;
     private TextView bottom_distance;
     private LinearLayout bottom_container;
+    private LinearLayout bottom_container2;
 
     private String cur_mode="bus";
     private FragmentManager fm;
@@ -90,6 +91,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
         walk_image=(ImageView)findViewById(R.id.transport_walk);
 
         bottom_container=(LinearLayout)findViewById(R.id.show_route_stepcontainer);
+        bottom_container2=(LinearLayout)findViewById(R.id.show_route_stepcontainer2);
+
         bottom_type=(TextView)findViewById(R.id.show_route_type);
         bottom_time=(TextView)findViewById(R.id.show_route_time);
         bottom_distance=(TextView)findViewById(R.id.show_route_distance);
@@ -250,7 +253,12 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                             JSONObject transit_detail=step_detail.getJSONObject("transit_details");
                             String org_name=new JSONObject(transit_detail.getString("line")).getString("short_name");
                             Log.e("타입",org_name);
-                            line_num_list.add(org_name.substring(0,1));
+                            if(org_name.contains("호선")){
+                                line_num_list.add(org_name.substring(0,1));
+                            }
+                            else{
+                                line_num_list.add(org_name);
+                            }
 
                             String org_dep=new JSONObject(transit_detail.getString("departure_stop")).getString("name");
                             line_name_list.add(org_dep.split(" ")[0]);
@@ -314,14 +322,24 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                             ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_9));
                                             break;
                                         default:
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_9));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_bus));
                                             break;
                                     }
-                                    bottom_container.addView(added_item);
+                                    if(i<2){
+                                        bottom_container.addView(added_item);
+                                    }
+                                    else{
+                                        bottom_container2.addView(added_item);
+                                    }
                                 }
                                 LinearLayout last_point=(LinearLayout) inflater.inflate(R.layout.line_end,null);
                                 ((TextView)(last_point.findViewById(R.id.last_name))).setText(last_stop+" 하차");
-                                bottom_container.addView(last_point);
+                                if(line_num_list.size()>1){
+                                    bottom_container2.addView(last_point);
+                                }
+                                else{
+                                    bottom_container.addView(last_point);
+                                }
 
                                 show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
                                 show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
@@ -514,6 +532,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     }
 
     public void set_camera(View v){
+//        Intent intent=new Intent(show_route_activity.this,ar_activity.class);
+//        startActivity(intent);
         if((staticValues.walk_guide_latlng!=null)&&(walk_guide_text!=null)&&
                 (staticValues.walk_all_latlng!=null)&&(staticValues.walk_guide_latlng.size()>3)){
             Intent intent=new Intent(show_route_activity.this,ar_activity.class);
