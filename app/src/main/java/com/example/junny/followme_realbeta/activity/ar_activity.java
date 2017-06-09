@@ -2,6 +2,7 @@ package com.example.junny.followme_realbeta.activity;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.GeomagneticField;
 import android.hardware.Sensor;
@@ -12,6 +13,7 @@ import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Vibrator;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -87,6 +89,11 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
     private TextView ar_destination;
     private TextView ar_distance;
 
+    //진동 변수
+    Vibrator mVibe = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+    SharedPreferences pref;
+    SharedPreferences.Editor editor;
+
     //초기화 감지 변수
     private boolean is_initi=false;
 
@@ -102,6 +109,13 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         vp=(ViewPager)findViewById(R.id.view_pager);
         vp.setAdapter(new pagerAdapter(getSupportFragmentManager()));
         vp.setCurrentItem(0);
+
+        pref=getSharedPreferences("pref", MODE_PRIVATE);
+        editor=pref.edit();
+        if(pref.getString("personal_setting","").equals("")){
+            editor.putString("vibe","on");
+            editor.commit();
+        }
 
     }
     protected void initialize(){
@@ -206,12 +220,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
             }
         }
     }
-//
-//    public boolean check_position(Location cur_location){
-//        Location from=cur_location;
-//        Location to=new Location("to");
-//
-//    }
 
 //    다음 체크 포인트에 도착했는지 판별 함수
     public boolean check_position(LatLng cur_position){

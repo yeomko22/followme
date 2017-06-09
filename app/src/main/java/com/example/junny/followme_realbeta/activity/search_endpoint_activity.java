@@ -14,20 +14,18 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.example.junny.followme_realbeta.item.DBHelper;
-import com.example.junny.followme_realbeta.adapter.MyRecyclerAdapter;
 import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.adapter.MyRecyclerAdapter;
+import com.example.junny.followme_realbeta.item.DBHelper;
 import com.example.junny.followme_realbeta.item.search_item;
 import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.places.AutocompleteFilter;
 import com.google.android.gms.location.places.Places;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -44,27 +42,27 @@ import java.util.ArrayList;
 import static android.R.attr.version;
 
 public class search_endpoint_activity extends FragmentActivity implements GoogleApiClient.OnConnectionFailedListener {
-    private RecyclerView recyclerView;
-    private EditText search_window;
+
+    //통신 요소들
     private HttpURLConnection conn;
-    private String cur_text;
-    private MyRecyclerAdapter rAdapter;
-    private ArrayList<search_item> search_items;
+    private GoogleApiClient mGoogleApiClient;
+
+    //셰어드, 핸들러, 로컬 디비 객체
+    private SharedPreferences pref;
     private android.os.Handler mHandler;
     private DBHelper dbHelper;
+
+    //리사이클러뷰 관련 요소
+    private MyRecyclerAdapter rAdapter;
+    private RecyclerView recyclerView;
+    private ArrayList<search_item> search_items;
+
+    //액티비티 뷰 요소
+    private EditText search_window;
     private LinearLayout delete_record;
     private TextView top_bar;
-    private SharedPreferences pref;
-    private GoogleApiClient mGoogleApiClient;
-    private LatLng northeast;
-    private LatLng southwest;
-    private LatLngBounds korea_bounds;
-    private AutocompleteFilter filter;
-
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
-    }
+    private String cur_text;
+    private ImageView go_back_btn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
@@ -97,17 +95,19 @@ public class search_endpoint_activity extends FragmentActivity implements Google
         mHandler=new android.os.Handler();
         recyclerView=(RecyclerView)findViewById(R.id.recyclerView);
         rAdapter=new MyRecyclerAdapter(search_endpoint_activity.this);
+        go_back_btn=(ImageView)findViewById(R.id.go_back);
+        go_back_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                search_endpoint_activity.this.onBackPressed();
+            }
+        });
 
         setHistory();
 
         recyclerView.setAdapter(rAdapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
-
-        northeast=new LatLng(39.5562517,131.6064755);
-        southwest=new LatLng(32.5668292,125.2783505);
-        korea_bounds=new LatLngBounds(southwest, northeast);
-        filter=new AutocompleteFilter.Builder().setTypeFilter(AutocompleteFilter.TYPE_FILTER_NONE).build();
 
         initData();
     }
@@ -123,6 +123,11 @@ public class search_endpoint_activity extends FragmentActivity implements Google
                     .build();
         }
         super.onResume();
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
     }
 
     private void setHistory(){
@@ -190,29 +195,6 @@ public class search_endpoint_activity extends FragmentActivity implements Google
                         @Override
                         public void run() {
                             try{
-//                                구글 자동완성 요청, 웹과 마찬가지로 다섯개까지 밖에는 제공하지 않는다
-//                                Log.e("1", "1");
-//                                PendingResult<AutocompletePredictionBuffer> result
-//                                        =Places.GeoDataApi.getAutocompletePredictions(mGoogleApiClient, cur_text, korea_bounds, filter);
-//                                result.then(new ResultTransform<AutocompletePredictionBuffer, Result>() {
-//                                    @Nullable
-//                                    @Override
-//                                    public PendingResult<Result> onSuccess(@NonNull AutocompletePredictionBuffer autocompletePredictions) {
-//                                        Log.e("결과 개수", Integer.toString(autocompletePredictions.getCount()));
-//                                        for(int i=0;i<autocompletePredictions.getCount();i++){
-//                                            String a=autocompletePredictions.get(i).getPrimaryText(new CharacterStyle() {
-//                                                @Override
-//                                                public void updateDrawState(TextPaint tp) {
-//
-//                                                }
-//                                            }).toString();
-//                                            Log.e("검색 결과 값", a);
-//                                        }
-//                                        return null;
-//                                    }
-//                                });
-
-
                                 //다음 로컬 api를 사용https://apis.daum.net/local/v1/search/keyword.json?apikey=5a3b393c51ad7571d6a92599bd57a77e&query=%ED%99%8D%EB%8C%80
                                 String str_url="https://apis.daum.net/local/v1/search/keyword.json?apikey=00b029ef729c6020abe2c0fe859eb77f&sort=1&query="+ URLEncoder.encode(cur_text,"UTF-8");
 
@@ -274,7 +256,6 @@ public class search_endpoint_activity extends FragmentActivity implements Google
                             }
                         }
                     });
-
                 }
             }
         });

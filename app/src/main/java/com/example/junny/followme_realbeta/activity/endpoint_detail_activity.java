@@ -10,10 +10,11 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.example.junny.followme_realbeta.adapter.DetailAdapter;
 import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.adapter.DetailAdapter;
 import com.example.junny.followme_realbeta.item.detail_item;
 
 import org.json.JSONArray;
@@ -29,14 +30,22 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 
 public class endpoint_detail_activity extends Activity {
-    private RecyclerView recyclerView;
-    private TextView search_keyword;
+    //통신 요소들
     private HttpURLConnection conn;
+
+    //리사이클러뷰 요소들
+    private RecyclerView recyclerView;
     private DetailAdapter rAdapter;
     private ArrayList<detail_item> detail_items;
+
+    //핸들러
     private android.os.Handler mHandler;
-    private String keyword;
+
+    //액티비티 뷰 요소들
     private TextView top_bar;
+    private TextView search_keyword;
+    private String keyword;
+    private ImageView go_back_btn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
@@ -63,6 +72,14 @@ public class endpoint_detail_activity extends Activity {
         recyclerView.setAdapter(rAdapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
+
+        go_back_btn=(ImageView)findViewById(R.id.go_back);
+        go_back_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                endpoint_detail_activity.this.onBackPressed();
+            }
+        });
 
     }
     @Override
