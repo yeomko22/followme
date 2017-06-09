@@ -9,6 +9,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -47,7 +48,7 @@ import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
 import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
 
 public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
-        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener,SensorEventListener{
+        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,SensorEventListener{
 
     private GoogleMap mMap;
     private LocationRequest mLocationRequest;
@@ -62,7 +63,7 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
     private TextView ar_distance;
     private fragment_ar fa;
     private fragment_map fm;
-    private int cur_point=0;
+    private int cur_point=1;
     private float past_distance;
     private ImageView arrow;
     private float bearing=0;
@@ -83,16 +84,100 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
     private float last_angle;
 
     private float cur_accuracy;
-
+    private LocationManager locationManager;
+    private android.location.LocationListener locallocationListener;
+    private boolean initialized=false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.ar_activity);
         mHandler=new Handler();
-        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        mAccelSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        mMagneticSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        vp=(ViewPager)findViewById(R.id.view_pager);
+        vp.setAdapter(new pagerAdapter(getSupportFragmentManager()));
+        vp.setCurrentItem(0);
+        
+        locationManager=(LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        if(ContextCompat.checkSelfPermission(ar_activity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},0);
+        }
+
+        locallocationListener=new android.location.LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+
+                if(location.getAccuracy()<30){
+                    if(!initialized){
+                        initialized=true;
+                        initialize();
+                    }
+
+                    Log.e("유효","11");
+                    Toast.makeText(ar_activity.this,"내위치 인식",Toast.LENGTH_LONG).show();
+                    staticValues.mLastLocation=location;
+                    mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
+                    staticValues.mLastLat=location.getLatitude();
+                    staticValues.mLastLong=location.getLongitude();
+
+                    if(check_position(mLastLatLong)){
+                        guide_num.setText(Integer.toString(cur_point));
+                       guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
+                    }
+                    if(staticValues.distance>1000){
+                        ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
+                    }
+                    else{
+                        ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
+                    }
+                    if(fm.myPosition!=null){
+                        fm.myPosition.remove();
+                    }
+                    fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(mLastLatLong));
+
+                    return;
+                }
+                else{
+                    Log.e("무효","11");
+                }
+            }
+
+//            @Override
+//            public void onLocationChanged(Location location) {
+//                if(staticValues.localArray==null){
+//                    staticValues.localArray=new ArrayList<Float>();
+//                }
+//                if(staticValues.localArray.size()<10){
+//                    if(location.getAccuracy()<50){
+//                        staticValues.localArray.add(location.getAccuracy());
+//                        if(location.getAccuracy()<20){
+//                            staticValues.local_accuracy_num+=1;
+//                        }
+//                    }
+//                    else{
+//                        Log.e("필터링해땅",Float.toString(location.getAccuracy()));
+//                    }
+//                }
+//                else{
+//                    float local_sum=0;
+//                    for(int i=0;i<staticValues.localArray.size();i++){
+//                        local_sum+=location.getAccuracy();
+//                    }
+//                    Log.e("GPS 10회 평균 정확도",Float.toString(local_sum/10.0f));
+//                    Log.e("GPS 30m 이내 정확도 회수", Integer.toString(staticValues.local_accuracy_num));
+//                    staticValues.localArray.clear();
+//                    staticValues.local_accuracy_num=0;
+//                }
+//            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {}
+            @Override
+            public void onProviderEnabled(String provider) {}
+            @Override
+            public void onProviderDisabled(String provider) {}
+        };
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locallocationListener);
 
 //        AsyncTask.execute(new Runnable() {
 //            @Override
@@ -106,10 +191,8 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
 //                }
 //            }
 //        });
-
-        vp=(ViewPager)findViewById(R.id.view_pager);
-        vp.setAdapter(new pagerAdapter(getSupportFragmentManager()));
-        vp.setCurrentItem(0);
+    }
+    public void initialize(){
 
         guide_text=(TextView)findViewById(R.id.guide_text);
         guide_num=(TextView)findViewById(R.id.guide_num);
@@ -125,7 +208,16 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         }
         guide_num.setText("1");
         guide_text.setText(staticValues.walk_guide_text.get(0));
+
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        mAccelSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mMagneticSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+
+        mSensorManager.registerListener(this, mAccelSensor,SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+        mSensorManager.registerListener(this, mMagneticSensor,SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+
     }
+
     protected void onResume() {
         if (mGoogleApiClient == null) {
             mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -151,12 +243,11 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         // In this example, the sensor reporting delay is small enough such that
         // the application receives an update before the system checks the sensor
         // readings again.
-        mSensorManager.registerListener(this, mAccelSensor,SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
-        mSensorManager.registerListener(this, mMagneticSensor,SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
     }
     @Override
     protected void onPause(){
-        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, locationListener);
+//        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, locationListener);
+        locationManager.removeUpdates(locallocationListener);
         mSensorManager.unregisterListener(this);
         Log.e("센서 해지","11");
         super.onPause();
@@ -277,39 +368,58 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
-    class mLoactionListener implements LocationListener{
-        @Override
-        public void onLocationChanged(Location location) {
-            cur_accuracy=location.getAccuracy();
-            Log.e("정확도",Float.toString(cur_accuracy));
-            if(cur_accuracy>0&&cur_accuracy<20){
-                Log.e("유효","11");
-                staticValues.mLastLocation=location;
-                mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
-                staticValues.mLastLat=location.getLatitude();
-                staticValues.mLastLong=location.getLongitude();
-
-                if(check_position(mLastLatLong)){
-                    guide_num.setText(Integer.toString(cur_point));
-                    guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
-
-                }
-                if(staticValues.distance>1000){
-                    ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
-                }
-                else{
-                    ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
-                }
-                fm.myPosition.remove();
-                fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(mLastLatLong));
-                return;
-            }
-            else{
-                Log.e("무효",Float.toString(cur_accuracy));
-                return;
-            }
-        }
-    }
+//    class mLoactionListener implements LocationListener{
+//        @Override
+//        public void onLocationChanged(Location location) {
+//            if(staticValues.APIArray==null){
+//                staticValues.APIArray=new ArrayList<Float>();
+//            }
+//            if(staticValues.APIArray.size()<10){
+//                staticValues.APIArray.add(location.getAccuracy());
+//                if(location.getAccuracy()<30){
+//                    staticValues.api_accuracy_num+=1;
+//                }
+//            }
+//            else{
+//                float api_sum=0;
+//                for(int i=0;i<staticValues.APIArray.size();i++){
+//                    api_sum+=location.getAccuracy();
+//                }
+//                Log.e("api 10회 평균 정확도",Float.toString(api_sum/10.0f));
+//                Log.e("api 30m 이내 정확도 회수", Integer.toString(staticValues.api_accuracy_num));
+//                staticValues.APIArray.clear();
+//                staticValues.api_accuracy_num=0;
+//            }
+//            cur_accuracy=location.getAccuracy();
+//            Log.e("API 정확도",Float.toString(cur_accuracy));
+//            if(cur_accuracy>0&&cur_accuracy<20){
+//                Log.e("유효","11");
+//                staticValues.mLastLocation=location;
+//                mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
+//                staticValues.mLastLat=location.getLatitude();
+//                staticValues.mLastLong=location.getLongitude();
+//
+//                if(check_position(mLastLatLong)){
+//                    guide_num.setText(Integer.toString(cur_point));
+//                    guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
+//
+//                }
+//                if(staticValues.distance>1000){
+//                    ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
+//                }
+//                else{
+//                    ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
+//                }
+//                fm.myPosition.remove();
+//                fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(mLastLatLong));
+//                return;
+//            }
+//            else{
+//                Log.e("무효",Float.toString(cur_accuracy));
+//                return;
+//            }
+//        }
+//    }
 
     public boolean check_position(LatLng cur_position){
         Location from=new Location("from");
@@ -321,16 +431,18 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         to.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
         //이전 거리와 지금 거리의 차이 - 이동 거리 - 이걸 토탈에서 빼주자
         float distance=from.distanceTo(to);
-        if(distance<15){
+        if(distance<20){
+            //목표 지점에 도착했을 경우
             Toast.makeText(ar_activity.this, "주요 포인트 도착",Toast.LENGTH_LONG).show();
             cur_point+=1;
             if(staticValues.walk_guide_latlng.size()>cur_point){
                 //포인트 지점에 도착하면, 해당 지점과 시작점 사이의 거리만큼을 빼주면 된다 현재 거리와 별개 전체 거리에서
                 //이전 키포인트에서 지금 키포인트사이의 거리만큼을 빼준다? 노노 직선거리잖아 직선과 곡선 차이때문에 나는 차이일 듯
+                //
                 next.setLatitude(staticValues.walk_guide_latlng.get(cur_point).latitude);
                 next.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
                 past_distance=from.distanceTo(next);
-                staticValues.last_bearing=from.bearingTo(next);
+                staticValues.last_bearing=to.bearingTo(next);
             }
             else{
                 Toast.makeText(ar_activity.this,"목적지에 도착했습니다",Toast.LENGTH_LONG).show();
@@ -349,40 +461,39 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         virtual_tracking();
     }
 
-    @Override
-    public void onLocationChanged(Location location) {
-        Log.e("위도,경도",Double.toString(location.getLatitude())+","+Double.toString(location.getLongitude()));
-        Toast.makeText(ar_activity.this,Float.toString(location.getAccuracy()),Toast.LENGTH_LONG).show();
-
-        staticValues.mLastLocation=location;
-        mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
-        staticValues.mLastLat=location.getLatitude();
-        staticValues.mLastLong=location.getLongitude();
-
-        mMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())));
-
-        if(check_position(nextPosition)){
-            guide_num.setText(Integer.toString(cur_point));
-            guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
-
-        }
-        if(staticValues.distance>1000){
-            ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
-        }
-        else{
-            ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
-        }
-        fm.myPosition.remove();
-        fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(nextPosition).icon(BitmapDescriptorFactory.fromResource(R.drawable.green_arrow)));
-        return;
-    }
+//    @Override
+//    public void onLocationChanged(Location location) {
+//        Log.e("위도,경도",Double.toString(location.getLatitude())+","+Double.toString(location.getLongitude()));
+//        Toast.makeText(ar_activity.this,Float.toString(location.getAccuracy()),Toast.LENGTH_LONG).show();
+//
+//        staticValues.mLastLocation=location;
+//        mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
+//        staticValues.mLastLat=location.getLatitude();
+//        staticValues.mLastLong=location.getLongitude();
+//
+//        mMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())));
+//
+//        if(check_position(nextPosition)){
+//            guide_num.setText(Integer.toString(cur_point));
+//            guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
+//
+//        }
+//        if(staticValues.distance>1000){
+//            ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
+//        }
+//        else{
+//            ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
+//        }
+//        fm.myPosition.remove();
+//        fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(nextPosition).icon(BitmapDescriptorFactory.fromResource(R.drawable.green_arrow)));
+//        return;
+//    }
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         if (ContextCompat.checkSelfPermission(ar_activity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 0);
         }
-
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (mLastLocation != null) {
             Log.e("위치 잘 받아옴", "온커넥트");
@@ -395,9 +506,9 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
 
             cur_location = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
         }
-        createLocationRequest();
-        locationListener=new mLoactionListener();
-        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, locationListener);
+//        createLocationRequest();
+//        locationListener=new mLoactionListener();
+//        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, locationListener);
     }
 
 

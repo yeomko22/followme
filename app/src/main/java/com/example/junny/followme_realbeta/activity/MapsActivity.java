@@ -114,9 +114,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mLocationRequest.setFastestInterval(5000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
-//    protected void getSetting(){
-//
-//    }
 
     /**
      * Manipulates the map once available.

@@ -46,4 +46,9 @@ public class staticValues {
     public static LatLng middle_point;
     public static float distance;
     public static float last_bearing;
+
+    public static ArrayList<Float> localArray;
+    public static ArrayList<Float> APIArray;
+    public static int local_accuracy_num=0;
+    public static int api_accuracy_num=0;
 }

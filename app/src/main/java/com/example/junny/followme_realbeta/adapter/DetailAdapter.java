@@ -20,7 +20,6 @@ import java.util.ArrayList;
 
 import static android.R.attr.version;
 import static com.example.junny.followme_realbeta.staticValues.mLastLat;
-import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
 import static com.example.junny.followme_realbeta.staticValues.mLastLong;
 import static com.example.junny.followme_realbeta.staticValues.to_lat;
 import static com.example.junny.followme_realbeta.staticValues.to_location;
@@ -62,7 +61,7 @@ public class DetailAdapter extends RecyclerView.Adapter<DetailAdapter.ViewHolder
                 to_location.setLatitude(staticValues.to_lat);
                 to_location.setLongitude(to_long);
 
-                staticValues.distance=mLastLocation.distanceTo(to_location);
+                staticValues.distance=staticValues.mLastLocation.distanceTo(to_location);
                 staticValues.middle_point=new LatLng(((mLastLat+to_lat)/2.0),((mLastLong+to_long)/2.0));
 
                 if(staticValues.dbHelper==null){
