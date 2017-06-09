@@ -94,19 +94,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         mAccelSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mMagneticSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 
-//        AsyncTask.execute(new Runnable() {
-//            @Override
-//            public void run() {
-//                try{
-//                    Thread.sleep(2000);
-//                    updateOrientationAngles();
-//                }
-//                catch(Exception e){
-//                    e.printStackTrace();
-//                }
-//            }
-//        });
-
         vp=(ViewPager)findViewById(R.id.view_pager);
         vp.setAdapter(new pagerAdapter(getSupportFragmentManager()));
         vp.setCurrentItem(0);
@@ -144,13 +131,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         }
         super.onResume();
 
-        // Get updates from the accelerometer and magnetometer at a constant rate.
-        // To make batch operations more efficient and reduce power consumption,
-        // provide support for delaying updates to the application.
-        //
-        // In this example, the sensor reporting delay is small enough such that
-        // the application receives an update before the system checks the sensor
-        // readings again.
         mSensorManager.registerListener(this, mAccelSensor,SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
         mSensorManager.registerListener(this, mMagneticSensor,SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
     }
@@ -161,77 +141,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         Log.e("센서 해지","11");
         super.onPause();
     }
-
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor == mAccelSensor) {
-            System.arraycopy(event.values, 0, mAccelerometerReading,
-                    0, mAccelerometerReading.length);
-        }
-        else if (event.sensor == mMagneticSensor) {
-            System.arraycopy(event.values, 0, mMagnetometerReading,
-                    0, mMagnetometerReading.length);
-        }
-        updateOrientationAngles();
-    }
-    public void updateOrientationAngles() {
-        // Update rotation matrix, which is needed to update orientation angles.
-        mSensorManager.getRotationMatrix(mRotationMatrix, null,
-                mAccelerometerReading, mMagnetometerReading);
-
-        // "mRotationMatrix" now has up-to-date information.
-
-        mSensorManager.getOrientation(mRotationMatrix, mOrientationAngles);
-        if(azimuth==null){
-            azimuth=new ArrayList<Float>();
-        }
-
-        if(azimuth.size()<10){
-            float added_degree=(float)Math.toDegrees(mOrientationAngles[0]);
-            azimuth.add(added_degree);
-            azi_sum+=added_degree;
-        }
-        else{
-            //화살표가 사라지는 이유는 필터에서 반환값이 NAN이 나와서 없어지는 것, 그래서 우선 필터를 제외시킴
-//            Log.e("필터링 전",Float.toString(azi_sum/10.0f));
-//            Log.e("필터링 후", Float.toString(filter()));
-//            fa.arrow.setRotation(filter());
-            float rotation_angle=(azi_sum/10.0f);
-            if(rotation_angle<0){rotation_angle=rotation_angle+360;}
-//            Log.e("돌아가는 각도",Float.toString(rotation_angle));
-
-            if(last_angle==0){
-                last_angle=rotation_angle;
-            }
-            if(Math.abs(rotation_angle-last_angle)<90){
-                last_angle=rotation_angle;
-                fa.arrow.setRotation(staticValues.last_bearing-rotation_angle);
-            }
-            else{
-//                Log.e("필터 작동",Float.toString(rotation_angle));
-            }
-            azimuth.clear();
-            azi_sum=0;
-            count+=1;
-        }
-        // "mOrientationAngles" now has up-to-date information.
-    }
-//    public float filter(){
-//        float cur_avg=azi_sum/10.0f;
-//        float new_sum=0;
-//        float count=0;
-//        for(int i=0;i<azimuth.size();i++){
-//            if(Math.abs(azimuth.get(i)-cur_avg)>40){
-//                Log.e("필터 작동",Float.toString(azimuth.get(i)));
-//            }
-//            else{
-//                new_sum+=azimuth.get(i);
-//                count+=1;
-//            }
-//        }
-//        return new_sum/count;
-//    }
-
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -425,6 +334,52 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         }
     }
 
+    //센서 인식, 방향 감지 부분 완성
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor == mAccelSensor) {
+            System.arraycopy(event.values, 0, mAccelerometerReading,
+                    0, mAccelerometerReading.length);
+        }
+        else if (event.sensor == mMagneticSensor) {
+            System.arraycopy(event.values, 0, mMagnetometerReading,
+                    0, mMagnetometerReading.length);
+        }
+        updateOrientationAngles();
+    }
+    public void updateOrientationAngles() {
+        // Update rotation matrix, which is needed to update orientation angles.
+        mSensorManager.getRotationMatrix(mRotationMatrix, null,
+                mAccelerometerReading, mMagnetometerReading);
+
+        mSensorManager.getOrientation(mRotationMatrix, mOrientationAngles);
+        if(azimuth==null){
+            azimuth=new ArrayList<Float>();
+        }
+
+        if(azimuth.size()<10){
+            float added_degree=(float)Math.toDegrees(mOrientationAngles[0]);
+            azimuth.add(added_degree);
+            azi_sum+=added_degree;
+        }
+        else{
+            float rotation_angle=(azi_sum/10.0f);
+            if(rotation_angle<0){rotation_angle=rotation_angle+360;}
+
+            if(last_angle==0){
+                last_angle=rotation_angle;
+            }
+            if(Math.abs(rotation_angle-last_angle)<90){
+                last_angle=rotation_angle;
+                fa.arrow.setRotation(staticValues.last_bearing-rotation_angle);
+            }
+            azimuth.clear();
+            azi_sum=0;
+            count+=1;
+        }
+    }
+
+    //가상 GPS, 지금은 별로 쓸모 없음
     public void virtual_tracking(){
         Log.e("트랙킹","11");
         AsyncTask.execute(new Runnable() {
