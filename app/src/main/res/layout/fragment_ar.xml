@@ -15,6 +15,11 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginTop="50dp"
         android:id="@+id/arrow"
-        android:rotation="-45"
-        android:src="@drawable/navigation" />
+        android:src="@drawable/navigation_right" />
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|right"
+        android:text="갈림길 도착"
+        android:onClick="next_checkpoint"/>
 </FrameLayout>
