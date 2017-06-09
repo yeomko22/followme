@@ -52,7 +52,7 @@ public class fragment_map extends android.support.v4.app.Fragment implements OnM
         mMap.addMarker(new MarkerOptions().position(to_latlng).title("도착점"));
 
         for(int i=0;i<staticValues.walk_guide_latlng.size();i++){
-            mMap.addMarker(new MarkerOptions().position(staticValues.walk_guide_latlng.get(i)).icon(BitmapDescriptorFactory.fromResource(R.drawable.bluepin)));
+            mMap.addMarker(new MarkerOptions().position(staticValues.walk_guide_latlng.get(i)).icon(BitmapDescriptorFactory.fromResource(R.drawable.pinholder)));
         }
         set_zoom();
         mMap.addPolyline(staticValues.cur_poly);

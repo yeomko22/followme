@@ -42,7 +42,6 @@ import com.skp.Tmap.TMapTapi;
 
 import java.util.ArrayList;
 
-import static com.example.junny.followme_realbeta.staticValues.last_bearing;
 import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
 import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
 
@@ -87,10 +86,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
     private TextView guide_num;
     private TextView ar_destination;
     private TextView ar_distance;
-    private TextView last_bearing_view;
-    private TextView last_angle_view;
-    private TextView last_accuracy_view;
-    private TextView last_next_view;
 
     //초기화 감지 변수
     private boolean is_initi=false;
@@ -108,10 +103,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         vp.setAdapter(new pagerAdapter(getSupportFragmentManager()));
         vp.setCurrentItem(0);
 
-        last_bearing_view=(TextView)findViewById(R.id.last_bearing);
-        last_angle_view=(TextView)findViewById(R.id.last_angle);
-        last_accuracy_view=(TextView)findViewById(R.id.last_accuracy);
-        last_next_view=(TextView)findViewById(R.id.last_distance);
     }
     protected void initialize(){
         guide_text=(TextView)findViewById(R.id.guide_text);
@@ -175,10 +166,8 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
     class mLoactionListener implements LocationListener{
         @Override
         public void onLocationChanged(Location location) {
-            Toast.makeText(ar_activity.this,"위치인식 작동",Toast.LENGTH_LONG).show();
             cur_accuracy=location.getAccuracy();
             Log.e("정확도",Float.toString(cur_accuracy));
-            last_accuracy_view.setText(Float.toString(cur_accuracy));
             if(cur_accuracy>0&&cur_accuracy<=20){
                 Log.e("유효","11");
                 if(!is_initi){
@@ -201,6 +190,7 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
                 if(staticValues.distance>1000){
                     ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
                 }
+
                 else{
                     ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
                 }
@@ -234,9 +224,7 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         to.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
         //이전 거리와 지금 거리의 차이 - 이동 거리 - 이걸 토탈에서 빼주자
         float distance=from.distanceTo(to);
-        last_next_view.setText(Float.toString(distance));
         if(distance<20){
-            Toast.makeText(ar_activity.this, "주요 포인트 도착",Toast.LENGTH_LONG).show();
             cur_point+=1;
             if(staticValues.walk_guide_latlng.size()>cur_point){
                 //포인트 지점에 도착하면, 해당 지점과 시작점 사이의 거리만큼을 빼주면 된다 현재 거리와 별개 전체 거리에서
@@ -430,8 +418,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
             }
             if(Math.abs(rotation_angle-last_angle)<90){
                 last_angle=rotation_angle;
-                last_angle_view.setText(Float.toString(rotation_angle));
-                last_bearing_view.setText(Float.toString(last_bearing));
                 fa.arrow.setRotation(staticValues.last_bearing-rotation_angle);
             }
             azimuth.clear();

@@ -68,7 +68,8 @@ public class DetailAdapter extends RecyclerView.Adapter<DetailAdapter.ViewHolder
                 if(staticValues.dbHelper==null){
                     staticValues.dbHelper=new DBHelper(mContext, "history", null, version);
                 }
-                staticValues.dbHelper.insert(detail_item.getTitle(), detail_item.getNewAddress(), detail_item.getLatitude(), detail_item.getLongitude());
+                staticValues.dbHelper.check_insert(detail_item.getTitle(), detail_item.getNewAddress(), detail_item.getLatitude(), detail_item.getLongitude());
+
                 mContext.startActivity(intent);
             }
         });

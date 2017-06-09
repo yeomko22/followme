@@ -34,6 +34,26 @@ public class DBHelper extends SQLiteOpenHelper {
         String sql="create table history(num integer primary key autoincrement, title text, newAddress text, latitude text, longitude text);";
         db.execSQL(sql);
     }
+
+    public void check_insert(String title, String newAddress, String latitude, String longitude){
+        SQLiteDatabase write_db=getWritableDatabase();
+        SQLiteDatabase read_db=getReadableDatabase();
+        Cursor cursor=read_db.rawQuery("select * from history order by num desc limit 1", null);
+        if(cursor.getCount()!=0){
+            cursor.moveToFirst();
+            if(!cursor.getString(1).equals(title)){
+                String write_sql="insert into history(title,newAddress,latitude,longitude) values(\""+title+"\",\""+newAddress+"\",\""+latitude+"\",\""+longitude+"\");";
+                write_db.execSQL(write_sql);
+            }
+        }
+        else{
+            String write_sql="insert into history(title,newAddress,latitude,longitude) values(\""+title+"\",\""+newAddress+"\",\""+latitude+"\",\""+longitude+"\");";
+            write_db.execSQL(write_sql);
+        }
+        write_db.close();
+        read_db.close();
+    }
+
     public void insert(String title, String newAddress, String latitude, String longitude){
         SQLiteDatabase db=getWritableDatabase();
         String write_sql="insert into history(title,newAddress,latitude,longitude) values(\""+title+"\",\""+newAddress+"\",\""+latitude+"\",\""+longitude+"\");";
@@ -56,7 +76,6 @@ public class DBHelper extends SQLiteOpenHelper {
 
     public Cursor select(){
         SQLiteDatabase db=getReadableDatabase();
-        String result="";
         Cursor cursor=db.rawQuery("select * from history", null);
         return cursor;
     }
