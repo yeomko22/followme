@@ -64,7 +64,8 @@
         <activity
             android:name=".activity.SplashActivity"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
-        <activity android:name=".activity.SensorActivity"></activity>
+        <activity android:name=".activity.SensorActivity" />
+        <activity android:name=".activity.lib_test"></activity>
     </application>
 
 </manifest>

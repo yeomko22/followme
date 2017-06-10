@@ -2,12 +2,11 @@ package com.example.junny.followme_realbeta.activity;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.GeomagneticField;
 import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
 import android.os.AsyncTask;
@@ -21,15 +20,21 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.junny.followme_realbeta.R;
 import com.example.junny.followme_realbeta.fragment.fragment_ar;
 import com.example.junny.followme_realbeta.fragment.fragment_map;
+import com.example.junny.followme_realbeta.sensors.Orientation;
 import com.example.junny.followme_realbeta.staticValues;
+import com.example.junny.followme_realbeta.utils.OrientationSensorInterface;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
@@ -48,7 +53,7 @@ import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
 import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
 
 public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
-        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, SensorEventListener{
+        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, OrientationSensorInterface{
 
     //google api 변수들 모음
     private GoogleMap mMap;
@@ -82,15 +87,21 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
     private float last_angle;
     private SensorManager mSensorManager;
 
+    //방향 값 라이브러리
+    Orientation orientationSensor;
+
     //현재 액티비티 뷰 요소들 모음
     private ViewPager vp;
     private TextView guide_text;
     private TextView guide_num;
     private TextView ar_destination;
     private TextView ar_distance;
+    private DrawerLayout dLayout;
+    private ImageView setting_btn;
+    private boolean setting_open=false;
 
     //진동 변수
-    Vibrator mVibe = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
+    Vibrator mVibe;
     SharedPreferences pref;
     SharedPreferences.Editor editor;
 
@@ -102,13 +113,37 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         super.onCreate(savedInstanceState);
         setContentView(R.layout.ar_activity);
         mHandler=new Handler();
-        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        mAccelSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        mMagneticSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+
+        //센서 매니저 생성, 자기장 가속도 센서 등록
+//        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+//        mAccelSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+//        mMagneticSensor=mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+//        mSensorManager.registerListener(this, mAccelSensor,SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+//        mSensorManager.registerListener(this, mMagneticSensor,SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
+
+        orientationSensor=new Orientation(ar_activity.this, this);
+        orientationSensor.init(1.0,1.0,1.0);
+        orientationSensor.on(0);
 
         vp=(ViewPager)findViewById(R.id.view_pager);
         vp.setAdapter(new pagerAdapter(getSupportFragmentManager()));
         vp.setCurrentItem(0);
+
+        dLayout=(DrawerLayout)findViewById(R.id.drawable_layout);
+        setting_btn=(ImageView)findViewById(R.id.setting_btn);
+        setting_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(!setting_open){
+                    dLayout.openDrawer(Gravity.RIGHT);
+                    setting_open=true;
+                }
+                else{
+                    dLayout.closeDrawer(Gravity.RIGHT);
+                    setting_open=false;
+                }
+            }
+        });
 
         pref=getSharedPreferences("pref", MODE_PRIVATE);
         editor=pref.edit();
@@ -116,8 +151,63 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
             editor.putString("vibe","on");
             editor.commit();
         }
-
+        mVibe= (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
     }
+
+    protected void onResume() {
+        if (mGoogleApiClient == null) {
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
+        }
+        mGoogleApiClient.connect();
+
+        TMapTapi tMapTapi = new TMapTapi(this);
+        tMapTapi.setSKPMapAuthentication("4004a4c7-8e67-3c17-88d9-9799c613ecc7");
+
+        super.onResume();
+    }
+
+    @Override
+    protected void onPause(){
+        super.onPause();
+    }
+    protected void onStop(){
+
+        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, locationListener);
+//        mSensorManager.unregisterListener(this);
+        orientationSensor.off();
+        Log.e("센서 해지","11");
+        super.onStop();
+    }
+
+    public void onBackPressed(){
+        final AlertDialog.Builder alertDialog = new AlertDialog.Builder(ar_activity.this);
+        alertDialog.setMessage("길 안내를 종료합니다 \n 길 안내 푸쉬 알림을 받으시겠습니까?");
+        alertDialog.setNegativeButton("알림 받기", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                ar_activity.super.onBackPressed();
+            }
+        });
+        alertDialog.setNeutralButton("완전 종료", new DialogInterface.OnClickListener(){
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                ar_activity.super.onBackPressed();
+            }
+        });
+        alertDialog.setPositiveButton("취소", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+        alertDialog.show();
+    }
+
+    //나머지 화면 구성요소들의 초기화 설정,
     protected void initialize(){
         guide_text=(TextView)findViewById(R.id.guide_text);
         guide_num=(TextView)findViewById(R.id.guide_num);
@@ -134,39 +224,11 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         guide_num.setText("1");
         guide_text.setText(staticValues.walk_guide_text.get(0));
     }
-    protected void onResume() {
-        if (mGoogleApiClient == null) {
-            mGoogleApiClient = new GoogleApiClient.Builder(this)
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .addApi(LocationServices.API)
-                    .build();
-        }
-        mGoogleApiClient.connect();
 
-        TMapTapi tMapTapi = new TMapTapi(this);
-        tMapTapi.setSKPMapAuthentication("4004a4c7-8e67-3c17-88d9-9799c613ecc7");
-
-        if (mGoogleApiClient.isConnected()) {
-            Log.e("버츄얼","11");
-        }
-        super.onResume();
-
-        mSensorManager.registerListener(this, mAccelSensor,SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
-        mSensorManager.registerListener(this, mMagneticSensor,SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
-    }
-    @Override
-    protected void onPause(){
-        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, locationListener);
-        mSensorManager.unregisterListener(this);
-        Log.e("센서 해지","11");
-        super.onPause();
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-//        Log.e("정확도 변함", Integer.toString(accuracy));
-    }
+//    @Override
+//    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+////        Log.e("정확도 변함", Integer.toString(accuracy));
+//    }
 
     //로케이션리퀘스트 생성 함수, 10초에 한번씩 감지하도록 설정
     protected void createLocationRequest() {
@@ -182,8 +244,9 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         public void onLocationChanged(Location location) {
             cur_accuracy=location.getAccuracy();
             Log.e("정확도",Float.toString(cur_accuracy));
-            if(cur_accuracy>0&&cur_accuracy<=20){
+            if(cur_accuracy>0&&cur_accuracy<=25){
                 Log.e("유효","11");
+                //초기화 함수를 여기서 호출하는 이유는 유효한 정보를 제공하기 위해서는 처음에 GPS를 잡아내야만 하기 때문
                 if(!is_initi){
                     is_initi=true;
                     initialize();
@@ -199,7 +262,7 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
                 if(check_position(mLastLatLong)){
                     guide_num.setText(Integer.toString(cur_point));
                     guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
-
+                    mVibe.vibrate(500);
                 }
                 if(staticValues.distance>1000){
                     ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
@@ -281,36 +344,6 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(mLastLatLong));
     }
 
-
-
-//    @Override
-//    public void onLocationChanged(Location location) {
-//        Log.e("위도,경도",Double.toString(location.getLatitude())+","+Double.toString(location.getLongitude()));
-//        Toast.makeText(ar_activity.this,Float.toString(location.getAccuracy()),Toast.LENGTH_LONG).show();
-//
-//        staticValues.mLastLocation=location;
-//        mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
-//        staticValues.mLastLat=location.getLatitude();
-//        staticValues.mLastLong=location.getLongitude();
-//
-//        mMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())));
-//
-//        if(check_position(nextPosition)){
-//            guide_num.setText(Integer.toString(cur_point));
-//            guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
-//
-//        }
-//        if(staticValues.distance>1000){
-//            ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
-//        }
-//        else{
-//            ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
-//        }
-//        fm.myPosition.remove();
-//        fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(nextPosition).icon(BitmapDescriptorFactory.fromResource(R.drawable.green_arrow)));
-//        return;
-//    }
-
     @Override
     public void onConnected(@Nullable Bundle bundle) {
         if (ContextCompat.checkSelfPermission(ar_activity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -389,50 +422,54 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
         }
     }
 
-    //센서 인식, 방향 감지 부분 완성
     @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor == mAccelSensor) {
-            System.arraycopy(event.values, 0, mAccelerometerReading,
-                    0, mAccelerometerReading.length);
-        }
-        else if (event.sensor == mMagneticSensor) {
-            System.arraycopy(event.values, 0, mMagnetometerReading,
-                    0, mMagnetometerReading.length);
-        }
-        updateOrientationAngles();
+    public void orientation(Double AZIMUTH, Double PITCH, Double ROLL) {
+        fa.arrow.setRotation((float)(staticValues.last_bearing-(double)AZIMUTH));
     }
-    public void updateOrientationAngles() {
-        // Update rotation matrix, which is needed to update orientation angles.
-        mSensorManager.getRotationMatrix(mRotationMatrix, null,
-                mAccelerometerReading, mMagnetometerReading);
-
-        mSensorManager.getOrientation(mRotationMatrix, mOrientationAngles);
-        if(azimuth==null){
-            azimuth=new ArrayList<Float>();
-        }
-
-        if(azimuth.size()<10){
-            float added_degree=(float)Math.toDegrees(mOrientationAngles[0]);
-            azimuth.add(added_degree);
-            azi_sum+=added_degree;
-        }
-        else{
-            float rotation_angle=(azi_sum/10.0f);
-            if(rotation_angle<0){rotation_angle=rotation_angle+360;}
-
-            if(last_angle==0){
-                last_angle=rotation_angle;
-            }
-            if(Math.abs(rotation_angle-last_angle)<90){
-                last_angle=rotation_angle;
-                fa.arrow.setRotation(staticValues.last_bearing-rotation_angle);
-            }
-            azimuth.clear();
-            azi_sum=0;
-            count+=1;
-        }
-    }
+    //센서 인식, 방향 감지 부분 완성
+//    @Override
+//    public void onSensorChanged(SensorEvent event) {
+//        if (event.sensor == mAccelSensor) {
+//            System.arraycopy(event.values, 0, mAccelerometerReading,
+//                    0, mAccelerometerReading.length);
+//        }
+//        else if (event.sensor == mMagneticSensor) {
+//            System.arraycopy(event.values, 0, mMagnetometerReading,
+//                    0, mMagnetometerReading.length);
+//        }
+//        updateOrientationAngles();
+//    }
+//    public void updateOrientationAngles() {
+//        // Update rotation matrix, which is needed to update orientation angles.
+//        mSensorManager.getRotationMatrix(mRotationMatrix, null,
+//                mAccelerometerReading, mMagnetometerReading);
+//
+//        mSensorManager.getOrientation(mRotationMatrix, mOrientationAngles);
+//        if(azimuth==null){
+//            azimuth=new ArrayList<Float>();
+//        }
+//
+//        if(azimuth.size()<10){
+//            float added_degree=(float)Math.toDegrees(mOrientationAngles[0]);
+//            azimuth.add(added_degree);
+//            azi_sum+=added_degree;
+//        }
+//        else{
+//            float rotation_angle=(azi_sum/10.0f);
+//            if(rotation_angle<0){rotation_angle=rotation_angle+360;}
+//
+//            if(last_angle==0){
+//                last_angle=rotation_angle;
+//            }
+//            if(Math.abs(rotation_angle-last_angle)<90){
+//                last_angle=rotation_angle;
+//                fa.arrow.setRotation(staticValues.last_bearing-rotation_angle);
+//            }
+//            azimuth.clear();
+//            azi_sum=0;
+//            count+=1;
+//        }
+//    }
 
     //시뮬레이션 버튼 리스너
     public void start_virtual(View v){
