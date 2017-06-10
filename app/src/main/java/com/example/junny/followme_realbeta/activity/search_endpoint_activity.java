@@ -2,7 +2,6 @@ package com.example.junny.followme_realbeta.activity;
 
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentActivity;
@@ -20,26 +19,28 @@ import android.widget.TextView;
 
 import com.example.junny.followme_realbeta.R;
 import com.example.junny.followme_realbeta.adapter.MyRecyclerAdapter;
+import com.example.junny.followme_realbeta.interfaces.Search;
 import com.example.junny.followme_realbeta.item.DBHelper;
 import com.example.junny.followme_realbeta.item.search_item;
+import com.example.junny.followme_realbeta.response.SearchRes;
 import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.places.Places;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
 import static android.R.attr.version;
+import static com.example.junny.followme_realbeta.staticValues.daumMapKey;
 
 public class search_endpoint_activity extends FragmentActivity implements GoogleApiClient.OnConnectionFailedListener {
 
@@ -63,6 +64,10 @@ public class search_endpoint_activity extends FragmentActivity implements Google
     private TextView top_bar;
     private String cur_text;
     private ImageView go_back_btn;
+
+    //레트로핏 관련 요소들
+    Retrofit retrofit;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState){
@@ -108,6 +113,11 @@ public class search_endpoint_activity extends FragmentActivity implements Google
         recyclerView.setAdapter(rAdapter);
         recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
+
+        retrofit=new Retrofit.Builder()
+                .baseUrl("https://apis.daum.net/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
 
         initData();
     }
@@ -191,71 +201,150 @@ public class search_endpoint_activity extends FragmentActivity implements Google
 
                 else{
                     cur_text=new_text;
-                    AsyncTask.execute(new Runnable() {
+
+                    Search search_retro=retrofit.create(Search.class);
+                    Call<SearchRes> call = search_retro.search(daumMapKey, "1",cur_text);
+                    call.enqueue(new Callback<SearchRes>() {
                         @Override
-                        public void run() {
-                            try{
-                                //다음 로컬 api를 사용https://apis.daum.net/local/v1/search/keyword.json?apikey=5a3b393c51ad7571d6a92599bd57a77e&query=%ED%99%8D%EB%8C%80
-                                String str_url="https://apis.daum.net/local/v1/search/keyword.json?apikey=00b029ef729c6020abe2c0fe859eb77f&sort=1&query="+ URLEncoder.encode(cur_text,"UTF-8");
-
-                                URL url=new URL(str_url);
-
-                                conn=(HttpURLConnection)url.openConnection();
-                                conn.setRequestMethod("POST");
-                                conn.setDoInput(true);
-                                conn.setDoOutput(true);
-                                conn.setConnectTimeout(1000);
-                                conn.connect();
-
-                                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(),"UTF-8"));
-                                StringBuilder sb=new StringBuilder();
-                                String line=null;
-                                while((line=br.readLine())!=null){
-                                    sb.append(line);
-                                }
-                                String jsonString=sb.toString();
-                                JSONObject totalObject=new JSONObject(jsonString);
-                                JSONObject itemObject=new JSONObject(totalObject.getString("channel"));
-                                JSONArray jsonArray=new JSONArray(itemObject.getString("item"));
-
-                                search_items=new ArrayList<search_item>();
-                                for(int i=0;i<jsonArray.length();i++){
-                                    JSONObject cur_obj=jsonArray.getJSONObject(i);
-                                    String added_address;
-                                    if(cur_obj.getString("newAddress").equals("")){
-                                        added_address=cur_obj.getString("address");
+                        public void onResponse(Call<SearchRes> call, Response<SearchRes> response) {
+                            if(response.isSuccessful()){
+                                SearchRes res=response.body();
+                                Log.e("요청 보기",response.toString());
+                                try{
+                                    Log.e("아이템 개수", Integer.toString(res.getCount()));
+                                    for(int i=0;i<res.getCount();i++){
+                                        String item_address=res.getAddress(i);
+                                        String item_title=res.getTitle(i);
+                                        search_items.add(new search_item("item",item_title,item_address,"",""));
                                     }
-                                    else{
-                                        added_address=cur_obj.getString("newAddress");
-                                    }
-                                    search_items.add(new search_item("item",cur_obj.getString("title"),added_address,"",""));
+                                    rAdapter.setData_list(search_items);
+                                    rAdapter.notifyDataSetChanged();
+                                    delete_record.setClickable(false);
+                                    delete_record.setVisibility(View.INVISIBLE);
+                                    top_bar.setText(cur_text+" 검색 결과");
                                 }
-                                rAdapter.setData_list(search_items);
-                                mHandler.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        rAdapter.notifyDataSetChanged();
-                                        delete_record.setClickable(false);
-                                        delete_record.setVisibility(View.INVISIBLE);
-                                        top_bar.setText(cur_text+" 검색 결과");
-                                        return;
-                                    }
-                                });
-                            }
-                            catch(Exception e){
-                                StringWriter sw = new StringWriter();
-                                e.printStackTrace(new PrintWriter(sw));
-                                String exceptionAsStrting = sw.toString();
-                                Log.e("예외발생", exceptionAsStrting);
-                            }
-                            finally {
-                                if(conn!=null){
-                                    conn.disconnect();
+                                catch(Exception e){
+                                    StringWriter sw = new StringWriter();
+                                    e.printStackTrace(new PrintWriter(sw));
+                                    String exceptionAsStrting = sw.toString();
+                                    Log.e("예외발생", exceptionAsStrting);
                                 }
-                                return;
+
                             }
+                            else{
+                                Log.e("에러 메세지", response.toString());
+                            }
+
+                        }
+
+                        @Override
+                        public void onFailure(Call<SearchRes> call, Throwable t) {
+
                         }
                     });
+
+
+//                    call.enqueue(new Callback<SearchRes>() {
+//                        @Override
+//                        public void onResponse(Call<SearchRes> call, Response<SearchRes> response) {
+//                            if(response.isSuccessful()){
+//                                SearchRes res = response.body();
+//                                // 받아온 리스트를 순회하면서
+//                                try{
+//
+//
+//                                    String cur_address=res.getAddress();
+//                                    cur_address=cur_address.replace("대한민국", "");
+//                                    if(cur_address.contains("서울특별시 ")){
+//                                        cur_address=cur_address.replace("서울특별시 ","");
+//                                    }
+//                                    start_point.setText(cur_address);
+//                                }
+//                                catch(Exception e){
+//                                    StringWriter sw = new StringWriter();
+//                                    e.printStackTrace(new PrintWriter(sw));
+//                                    String exceptionAsStrting = sw.toString();
+//                                    Log.e("예외발생", exceptionAsStrting);
+//                                }
+//                            }
+//                            else{
+//                                Log.e("에러 메세지", response.toString());
+//                            }
+//                        }
+//
+//                        @Override
+//                        public void onFailure(Call<ReverseGeoRes> call, Throwable t) {
+//                            Log.e("실패원인",t.toString());
+//                        }
+//                    });
+
+//
+//                    AsyncTask.execute(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            try{
+//                                //다음 로컬 api를 사용https://apis.daum.net/local/v1/search/keyword.json?apikey=5a3b393c51ad7571d6a92599bd57a77e&query=%ED%99%8D%EB%8C%80
+//                                String str_url="?;
+//
+//                                URL url=new URL(str_url);
+//                                Log.e("접속 유알엘",str_url);
+//
+//                                conn=(HttpURLConnection)url.openConnection();
+//                                conn.setRequestMethod("POST");
+//                                conn.setDoInput(true);
+//                                conn.setDoOutput(true);
+//                                conn.setConnectTimeout(1000);
+//                                conn.connect();
+//
+//                                BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(),"UTF-8"));
+//                                StringBuilder sb=new StringBuilder();
+//                                String line=null;
+//                                while((line=br.readLine())!=null){
+//                                    sb.append(line);
+//                                }
+//                                String jsonString=sb.toString();
+//                                JSONObject totalObject=new JSONObject(jsonString);
+//                                JSONObject itemObject=new JSONObject(totalObject.getString("channel"));
+//                                JSONArray jsonArray=new JSONArray(itemObject.getString("item"));
+//
+//                                search_items=new ArrayList<search_item>();
+//                                for(int i=0;i<jsonArray.length();i++){
+//                                    JSONObject cur_obj=jsonArray.getJSONObject(i);
+//                                    String added_address;
+//                                    if(cur_obj.getString("newAddress").equals("")){
+//                                        added_address=cur_obj.getString("address");
+//                                    }
+//                                    else{
+//                                        added_address=cur_obj.getString("newAddress");
+//                                    }
+//                                    search_items.add(new search_item("item",cur_obj.getString("title"),added_address,"",""));
+//                                }
+//                                rAdapter.setData_list(search_items);
+//                                mHandler.post(new Runnable() {
+//                                    @Override
+//                                    public void run() {
+//                                        rAdapter.notifyDataSetChanged();
+//                                        delete_record.setClickable(false);
+//                                        delete_record.setVisibility(View.INVISIBLE);
+//                                        top_bar.setText(cur_text+" 검색 결과");
+//                                        return;
+//                                    }
+//                                });
+//                            }
+//                            catch(Exception e){
+//                                StringWriter sw = new StringWriter();
+//                                e.printStackTrace(new PrintWriter(sw));
+//                                String exceptionAsStrting = sw.toString();
+//                                Log.e("예외발생", exceptionAsStrting);
+//                            }
+//                            finally {
+//                                if(conn!=null){
+//                                    conn.disconnect();
+//                                }
+//                                return;
+//                            }
+//                        }
+//                    });
                 }
             }
         });

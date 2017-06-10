@@ -42,11 +42,8 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.skp.Tmap.TMapTapi;
 
-import org.json.JSONArray;
-
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.HttpURLConnection;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -69,8 +66,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //통신 요소들
     private GoogleApiClient mGoogleApiClient;
-    private HttpURLConnection conn;
-    private JSONArray features;
 
     //레트로핏
     private Retrofit retrofit;
@@ -258,19 +253,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
 
 
-            ReverseGeo reverseGeo=retrofit.create(ReverseGeo.class);
-            Call<ReverseGeoRes> call = reverseGeo.reverseGeo(gMapKey,"ko",Double.toString(staticValues.mLastLat)+","+Double.toString(staticValues.mLastLong));
+            ReverseGeo retro_geo=retrofit.create(ReverseGeo.class);
+            Call<ReverseGeoRes> call = retro_geo.reverseGeo(gMapKey,"ko",Double.toString(staticValues.mLastLat)+","+Double.toString(staticValues.mLastLong));
             call.enqueue(new Callback<ReverseGeoRes>() {
                 @Override
                 public void onResponse(Call<ReverseGeoRes> call, Response<ReverseGeoRes> response) {
                     if(response.isSuccessful()){
                         ReverseGeoRes res = response.body();
+                        Log.e("성공적인 바디",response.body().toString());
                         // 받아온 리스트를 순회하면서
                         try{
                             String cur_address=res.getAddress();
                             cur_address=cur_address.replace("대한민국", "");
-                            if(cur_address.contains("서울특별시")){
-                                cur_address=cur_address.replace("서울특별시","");
+                            if(cur_address.contains("서울특별시 ")){
+                                cur_address=cur_address.replace("서울특별시 ","");
                             }
                             start_point.setText(cur_address);
                         }

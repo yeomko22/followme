@@ -48,4 +48,5 @@ public class staticValues {
     public static float last_bearing;
 
     public static final String gMapKey="AIzaSyC2KPG-dhy-IqT1iBhb6W4N3WC1od4qAN0";
+    public static final String daumMapKey="00b029ef729c6020abe2c0fe859eb77f";
 }
