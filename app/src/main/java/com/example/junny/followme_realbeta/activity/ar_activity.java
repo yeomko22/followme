@@ -67,7 +67,7 @@ public class ar_activity extends FragmentActivity implements OnMapReadyCallback,
     private LatLng cur_location;
     private float cur_accuracy;
 
-    //방향 값 라이브러리
+    //라이브러리 센서
     Orientation orientationSensor;
 
     //현재 액티비티 뷰 요소들 모음

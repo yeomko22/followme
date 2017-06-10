@@ -9,7 +9,6 @@ import android.location.Geocoder;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
@@ -26,6 +25,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.interfaces.ReverseGeo;
+import com.example.junny.followme_realbeta.response.ReverseGeoRes;
 import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -42,16 +43,18 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.skp.Tmap.TMapTapi;
 
 import org.json.JSONArray;
-import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
-import java.net.URL;
 
-import static com.example.junny.followme_realbeta.staticValues.cur_address;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+import static com.example.junny.followme_realbeta.staticValues.gMapKey;
 import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
 import static com.example.junny.followme_realbeta.staticValues.mLocationRequest;
 
@@ -68,6 +71,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleApiClient mGoogleApiClient;
     private HttpURLConnection conn;
     private JSONArray features;
+
+    //레트로핏
+    private Retrofit retrofit;
 
     //핸들러
     private android.os.Handler mHandler;
@@ -103,6 +109,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         staticValues.mapFragment.getMapAsync(this);
 
+        //레트로핏 객체를 만들 때에 기본적인 유알엘을 정의
+        retrofit=new Retrofit.Builder()
+                .baseUrl("https://maps.googleapis.com/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
         if(!check_env()){
             Log.e("환경 설정이 안되어있음","11");
             initi=true;
@@ -128,9 +140,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             TMapTapi tMapTapi = new TMapTapi(this);
             tMapTapi.setSKPMapAuthentication("4004a4c7-8e67-3c17-88d9-9799c613ecc7");
         }
-
-
-        //구글 로케이션 api 연결
     }
     protected boolean check_env(){
         NetworkInfo activeNetwork=conn_manager.getActiveNetworkInfo();
@@ -249,68 +258,37 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
 
 
-            AsyncTask.execute(new Runnable() {
+            ReverseGeo reverseGeo=retrofit.create(ReverseGeo.class);
+            Call<ReverseGeoRes> call = reverseGeo.reverseGeo(gMapKey,"ko",Double.toString(staticValues.mLastLat)+","+Double.toString(staticValues.mLastLong));
+            call.enqueue(new Callback<ReverseGeoRes>() {
                 @Override
-                public void run() {
-                    try {
-                        //https://maps.googleapis.com/maps/api/geocode/json?latlng=40.714224,-73.961452&key=YOUR_API_KEY
-                        String tes_url="https://maps.googleapis.com/maps/api/geocode/json?latlng="+staticValues.mLastLat+","
-                                +staticValues.mLastLong+"&key=AIzaSyC2KPG-dhy-IqT1iBhb6W4N3WC1od4qAN0&language=ko";
-                        URL url = new URL(tes_url);
-                        Log.e("url",tes_url);
-
-                        conn = (HttpURLConnection) url.openConnection();
-                        conn.setRequestMethod("GET");
-                        conn.setDoInput(true);
-                        conn.setDoOutput(true);
-                        conn.setConnectTimeout(2000);
-                        conn.connect();
-
-                        if(conn.getResponseCode()==200){
-                            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-                            StringBuilder sb = new StringBuilder();
-                            String line = null;
-
-                            while ((line=br.readLine()) != null) {
-                                sb.append(line);
+                public void onResponse(Call<ReverseGeoRes> call, Response<ReverseGeoRes> response) {
+                    if(response.isSuccessful()){
+                        ReverseGeoRes res = response.body();
+                        // 받아온 리스트를 순회하면서
+                        try{
+                            String cur_address=res.getAddress();
+                            cur_address=cur_address.replace("대한민국", "");
+                            if(cur_address.contains("서울특별시")){
+                                cur_address=cur_address.replace("서울특별시","");
                             }
-                            JSONObject org_obj=new JSONObject(sb.toString());
-                            JSONArray result_array=new JSONArray(org_obj.getString("results"));
-                            JSONObject target_obj=result_array.getJSONObject(0);
-                            features=new JSONArray(target_obj.getString("address_components"));
-
-                            mHandler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        staticValues.cur_address=features.getJSONObject(2).getString("short_name")+" "+features.getJSONObject(1).getString("short_name")+" "+features.getJSONObject(0).getString("short_name");
-                                        if(cur_address.length()>15){
-                                            start_point.setText(staticValues.cur_address.substring(0,10)+"...");
-                                        }
-                                        else{
-                                            start_point.setText(cur_address);
-                                        }
-                                    } catch (Exception e) {
-                                        StringWriter sw = new StringWriter();
-                                        e.printStackTrace(new PrintWriter(sw));
-                                        String exceptionAsStrting = sw.toString();
-                                        Log.e("예외발생", exceptionAsStrting);
-                                    }
-                                    return;
-                                }
-                            });
+                            start_point.setText(cur_address);
                         }
-                        else{
-                            Log.e("유알엘",tes_url);
-                            Log.e("실패코드", Integer.toString(conn.getResponseCode()));
-                            Log.e("실패코드", conn.getResponseMessage());
+                        catch(Exception e){
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String exceptionAsStrting = sw.toString();
+                            Log.e("예외발생", exceptionAsStrting);
                         }
-                    } catch (Exception e) {
-                        StringWriter sw = new StringWriter();
-                        e.printStackTrace(new PrintWriter(sw));
-                        String exceptionAsStrting = sw.toString();
-                        Log.e("예외발생", exceptionAsStrting);
                     }
+                    else{
+                        Log.e("에러 메세지", response.toString());
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ReverseGeoRes> call, Throwable t) {
+                    Log.e("실패원인",t.toString());
                 }
             });
         }
