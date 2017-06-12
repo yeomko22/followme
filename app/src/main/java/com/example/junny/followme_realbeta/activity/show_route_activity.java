@@ -1,12 +1,9 @@
 package com.example.junny.followme_realbeta.activity;
 
-import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -18,7 +15,9 @@ import android.widget.Toast;
 
 import com.example.junny.followme_realbeta.R;
 import com.example.junny.followme_realbeta.interfaces.ShowRoute;
+import com.example.junny.followme_realbeta.interfaces.ShowWalk;
 import com.example.junny.followme_realbeta.response.ShowRouteRes;
+import com.example.junny.followme_realbeta.response.ShowWalkRes;
 import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -27,19 +26,9 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
-import com.skp.Tmap.TMapData;
-import com.skp.Tmap.TMapPoint;
-import com.skp.Tmap.TMapPolyLine;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,13 +39,17 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 import static com.example.junny.followme_realbeta.R.id.start_point;
+import static com.example.junny.followme_realbeta.staticValues.distance;
 import static com.example.junny.followme_realbeta.staticValues.gRouteKey;
 import static com.example.junny.followme_realbeta.staticValues.mLastLat;
 import static com.example.junny.followme_realbeta.staticValues.mLastLong;
 import static com.example.junny.followme_realbeta.staticValues.middle_point;
+import static com.example.junny.followme_realbeta.staticValues.tMapKey;
 import static com.example.junny.followme_realbeta.staticValues.to_lat;
 import static com.example.junny.followme_realbeta.staticValues.to_long;
 import static com.example.junny.followme_realbeta.staticValues.to_title;
+import static com.example.junny.followme_realbeta.staticValues.walk_all_latlng;
+import static com.example.junny.followme_realbeta.staticValues.walk_guide_latlng;
 import static com.example.junny.followme_realbeta.staticValues.walk_guide_text;
 
 public class show_route_activity extends FragmentActivity implements OnMapReadyCallback {
@@ -74,27 +67,16 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     private LinearLayout bottom_container2;
 
     private String cur_mode="bus";
-    private FragmentManager fm;
-    private HttpURLConnection conn;
 
     //구글 맵 변수들
     private GoogleMap show_Map;
-    private Handler mHandler;
-
-    //티맵 변수들
-    private TMapData tMapData;
-    private TMapPoint tMap_start;
-    private TMapPoint tMap_end;
 
     //라인 그려주는 변수들
     private Resources resources;
     private String last_stop;
-    private JSONArray features;
     private boolean contain_transit;
 
-    //이 둘의 차이점은 뭐지..?
     private PolylineOptions walkOptions;
-    private PolylineOptions walk_poly_options;
 
     private Retrofit retro_transit;
     private Retrofit retro_walk;
@@ -109,9 +91,9 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                 .baseUrl("https://maps.googleapis.com/")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
-        
+
         retro_walk=new Retrofit.Builder()
-                .baseUrl("https://maps.googleapis.com/")
+                .baseUrl("https://apis.skplanetx.com/")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
 
@@ -127,13 +109,9 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
         bottom_time=(TextView)findViewById(R.id.show_route_time);
         bottom_distance=(TextView)findViewById(R.id.show_route_distance);
 
-        mHandler=new Handler();
-        tMap_start=new TMapPoint(staticValues.mLastLat, staticValues.mLastLong);
-        tMap_end=new TMapPoint(staticValues.to_lat, to_long);
 
         SupportMapFragment showmapFragment=(SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.show_map);
         showmapFragment.getMapAsync(this);
-        tMapData=new TMapData();
 
         if (staticValues.cur_address.length()>8){
             start_point_view.setText(staticValues.cur_address.substring(0,8)+"...");
@@ -281,7 +259,6 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
 
                         LayoutInflater inflater=(LayoutInflater)show_route_activity.this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
                         for(int i=0;i<line_num_list.size();i++){
-                            Log.e("아이템을 만들긴함",Integer.toString(line_name_list.size()));
                             LinearLayout added_item=(LinearLayout) inflater.inflate(R.layout.line_background,null);
                             ((TextView) added_item.findViewById(R.id.num)).setText(line_num_list.get(i));
                             ((TextView) added_item.findViewById(R.id.name)).setText(line_name_list.get(i));
@@ -336,6 +313,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                 show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
                                 show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
                                 show_Map.addPolyline(rectOptions);
+                                staticValues.cur_poly=rectOptions;
                     }
                     catch(Exception e){
                         StringWriter sw = new StringWriter();
@@ -354,8 +332,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                 Log.e("실패원인",t.toString());
             }
         });
-
     }
+
     //구글 폴리라인 인코딩 해석기, 점들의 리스트를 리턴해준다
     private List<LatLng> decodePoly(String encoded) {
 
@@ -397,122 +375,63 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
         bottom_type.setText("도보");
         show_Map.clear();
         bottom_container.removeAllViews();
-//        티맵 데이터 객체로 경로를 요청, 날라온 폴리라인을 분해해서 이걸로 다시 구글 폴리라인을 생성, 상당히 번거롭다
-//        아래는 지오 제이썬 객체로 도보 경로를 받아온 것, 여기의 좌표로 폴리라인을 그릴 수 있다면 충분함 그걸로 대체하는 방향으로 가자
-        tMapData.findPathDataWithType(TMapData.TMapPathType.PEDESTRIAN_PATH, tMap_start, tMap_end, new TMapData.FindPathDataListenerCallback() {
+        walkOptions=new PolylineOptions();
+        walk_all_latlng=new ArrayList<LatLng>();
+
+        ShowWalk walkRes=retro_walk.create(ShowWalk.class);
+        Call<ShowWalkRes> call = walkRes.showWalk(tMapKey,Double.toString(mLastLong),Double.toString(mLastLat),Double.toString(to_long),Double.toString(to_lat),
+                "start","end","WGS84GEO","WGS84GEO");
+        call.enqueue(new Callback<ShowWalkRes>() {
             @Override
-            public void onFindPathData(TMapPolyLine tMapPolyLine) {
-
-                ArrayList<TMapPoint> tmap_poly = tMapPolyLine.getLinePoint();
-                staticValues.walk_all_latlng=new ArrayList<LatLng>();
-                walkOptions = new PolylineOptions();
-                for (int i = 0; i < tmap_poly.size(); i++) {
-                    TMapPoint cur_tpoint = tmap_poly.get(i);
-                    walkOptions.add(new LatLng(cur_tpoint.getLatitude(), cur_tpoint.getLongitude()));
-                    staticValues.walk_all_latlng.add(new LatLng(cur_tpoint.getLatitude(), cur_tpoint.getLongitude()));
-                }
-                AsyncTask.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        mHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
-                                show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
-                                show_Map.addPolyline(walkOptions);
-                                staticValues.cur_poly=walkOptions;
-                            }
-                        });
-                    }
-                });
-            }
-        });
-
-
-        AsyncTask.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Log.e("워크 어싱크야 돌아라","11");
-                    //도보 경로 티맵 geoJSON 받아오는 유알엘, 리퀘스트 코드 타입과 리스본스 코드 타입을 조심할 것, 경도 위도가 일반적인 순서와 다르다
-                    String tes_url="https://apis.skplanetx.com/tmap/routes/pedestrian?version=1&startX="+staticValues.mLastLong+"&startY="+staticValues.mLastLat+"&endX="+to_long+"&endY="+to_lat+"&startName=start&endName=end&reqCoordType=WGS84GEO&resCoordType=WGS84GEO&appKey=4004a4c7-8e67-3c17-88d9-9799c613ecc7";
-                    Log.e("도보 url", tes_url);
-                    URL url = new URL(tes_url);
-
-                    conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestMethod("GET");
-                    conn.setDoInput(true);
-                    conn.setDoOutput(true);
-                    conn.setConnectTimeout(2000);
-                    conn.connect();
-
-                    if(conn.getResponseCode()==200){
-                        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
-                        StringBuilder sb = new StringBuilder();
-                        String line = null;
-
-                        while ((line=br.readLine()) != null) {
-                            sb.append(line);
-                        }
-                        JSONObject org_obj=new JSONObject(sb.toString());
-                        features=org_obj.getJSONArray("features");
-
-                        walk_poly_options = new PolylineOptions();
-                        staticValues.walk_guide_latlng=new ArrayList<LatLng>();
+            public void onResponse(Call<ShowWalkRes> call, Response<ShowWalkRes> response) {
+                if (response.isSuccessful()) {
+                    ShowWalkRes res = response.body();
+                    Log.e("요청 보기", response.toString());
+                    try {
+                        walk_guide_latlng=new ArrayList<LatLng>();
                         walk_guide_text=new ArrayList<String>();
-
-                        for(int i=0;i<features.length();i++){
-                            JSONObject cur_obj=features.getJSONObject(i);
-                            JSONObject cur_geo=new JSONObject(cur_obj.getString("geometry"));
-                            JSONObject cur_prop=new JSONObject(cur_obj.getString("properties"));
-
-                            if(cur_geo.getString("type").equals("Point")){
-                                String point_array=cur_geo.getString("coordinates");
-                                if(point_array.charAt(1)!='['){
-                                    String trim_string=point_array.substring(1,point_array.length()-1);
-                                    String[] res=trim_string.split(",");
-                                    LatLng cur_point=new LatLng(Double.parseDouble(res[1]),Double.parseDouble(res[0]));
-
-                                    walk_poly_options.add(cur_point);
-                                    staticValues.walk_guide_latlng.add(cur_point);
-                                    walk_guide_text.add(cur_prop.getString("description"));
+                        for(int i=0;i<res.get_count();i++){
+                            if(res.get_type(i).equals("Point")){
+                                LatLng added_point=new LatLng(Double.parseDouble(res.get_point_lat(i)),Double.parseDouble(res.get_point_lng(i)));
+                                walk_guide_latlng.add(added_point);
+                                walk_guide_text.add(res.get_description(i));
+                                walkOptions.add(added_point);
+                                walk_all_latlng.add(added_point);
+                            }
+                            else{
+                                for(int j=0;j<res.get_coor_count(i);j++){
+                                    String[] str_latlng=res.get_coor_lat(i,j);
+                                    LatLng added_point=new LatLng(Double.parseDouble(str_latlng[0]),Double.parseDouble(str_latlng[1]));
+                                    walkOptions.add(added_point);
+                                    staticValues.walk_all_latlng.add(added_point);
                                 }
                             }
                         }
-                        mHandler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                Log.e("워크 핸들러야 돌아라","11");
-                                try {
 
-                                    String walk_time=(new JSONObject(features.getJSONObject(0).getString("properties"))).getString("totalTime");
-                                    int added_walk_time=Integer.parseInt(walk_time)/60;
+                        show_Map.addPolyline(walkOptions);
+                        staticValues.cur_poly=walkOptions;
+                        show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
+                        show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
 
-                                    staticValues.distance=Float.parseFloat((new JSONObject(features.getJSONObject(0).getString("properties"))).getString("totalDistance"));
-                                    bottom_distance.setText(String.format("%.2f",(staticValues.distance)/1000.0f)+"km");
-                                    bottom_time.setText(added_walk_time+"분");
+                        String walk_time=res.get_total_time();
+                        int added_walk_time=Integer.parseInt(walk_time)/60;
+                        distance=Float.parseFloat(res.get_total_distance());
+                        bottom_distance.setText(String.format("%.2f",(staticValues.distance)/1000.0f)+"km");
+                        bottom_time.setText(added_walk_time+"분");
 
-                                } catch (Exception e) {
-                                    StringWriter sw = new StringWriter();
-                                    e.printStackTrace(new PrintWriter(sw));
-                                    String exceptionAsStrting = sw.toString();
-                                    Log.e("예외발생", exceptionAsStrting);
-                                }
-                                return;
-                            }
-                        });
+                    } catch (Exception e) {
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        String exceptionAsStrting = sw.toString();
+                        Log.e("예외발생", exceptionAsStrting);
                     }
-                    else{
-                        Log.e("유알엘",tes_url);
-                        Log.e("실패코드", Integer.toString(conn.getResponseCode()));
-                        Log.e("실패코드", conn.getResponseMessage());
-                    }
-                } catch (Exception e) {
-                    StringWriter sw = new StringWriter();
-                    e.printStackTrace(new PrintWriter(sw));
-                    String exceptionAsStrting = sw.toString();
-                    Log.e("예외발생", exceptionAsStrting);
+                } else {
+                    Log.e("에러 메세지", response.toString());
                 }
+            }
+
+            public void onFailure(Call<ShowWalkRes> call, Throwable t) {
+                Log.e("실패원인", t.toString());
             }
         });
     }

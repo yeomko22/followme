@@ -56,7 +56,6 @@ public class fragment_map extends android.support.v4.app.Fragment implements OnM
         }
         set_zoom();
         mMap.addPolyline(staticValues.cur_poly);
-//        ((ar_activity)getActivity()).virtual_tracking();
     }
     public void set_zoom(){
         Log.e("현재의 직선 거리",Float.toString(staticValues.distance));

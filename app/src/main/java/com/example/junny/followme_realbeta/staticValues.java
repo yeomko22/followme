@@ -54,4 +54,5 @@ public class staticValues {
     public static final String gMapKey="AIzaSyC2KPG-dhy-IqT1iBhb6W4N3WC1od4qAN0";
     public static final String gRouteKey="AIzaSyBAy4VmTHyOCI1e_XvXwRlNn7pqwKU0t7o";
     public static final String daumMapKey="00b029ef729c6020abe2c0fe859eb77f";
+    public static final String tMapKey="4004a4c7-8e67-3c17-88d9-9799c613ecc7";
 }
