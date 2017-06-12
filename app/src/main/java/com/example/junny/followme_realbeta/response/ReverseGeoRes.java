@@ -29,7 +29,7 @@ public class ReverseGeoRes {
             this.formatted_address = formatted_address;
             this.geometry = geometry;
             this.place_id = place_id;
-//            this.types = types;
+            this.types = types;
         }
         public String getFormatted_address(){
             return formatted_address;

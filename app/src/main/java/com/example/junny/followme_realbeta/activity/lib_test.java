@@ -20,8 +20,6 @@ import java.util.ArrayList;
 public class lib_test extends AppCompatActivity implements SensorEventListener, OrientationSensorInterface {
     private ImageView lib_arrow;
     private ImageView sensor_arrow;
-    private TextView lib_accuracy;
-    private TextView sensor_accuracy;
     private TextView lib_value;
     private TextView sensor_value;
 
@@ -48,8 +46,6 @@ public class lib_test extends AppCompatActivity implements SensorEventListener, 
 
         lib_arrow=(ImageView)findViewById(R.id.lib_arrow);
         sensor_arrow=(ImageView)findViewById(R.id.sensor_arrow);
-        lib_accuracy=(TextView)findViewById(R.id.lib_accuracy);
-        sensor_accuracy=(TextView)findViewById(R.id.sensor_accuracy);
         lib_value=(TextView)findViewById(R.id.lib_value);
         sensor_value=(TextView)findViewById(R.id.sensor_value);
 
@@ -70,7 +66,6 @@ public class lib_test extends AppCompatActivity implements SensorEventListener, 
     @Override
     public void orientation(Double AZIMUTH, Double PITCH, Double ROLL) {
         String azi=Double.toString(AZIMUTH);
-        Log.e("라이브러리 값",azi);
         if(lib_value!=null){
             lib_value.setText(azi);
         }
@@ -103,13 +98,14 @@ public class lib_test extends AppCompatActivity implements SensorEventListener, 
 
         if(azimuth.size()<10){
             float added_degree=(float)Math.toDegrees(mOrientationAngles[0]);
+            Log.e("센서 값",Float.toString(added_degree));
             azimuth.add(added_degree);
             azi_sum+=added_degree;
         }
         else{
             float rotation_angle=(azi_sum/10.0f);
             if(rotation_angle<0){rotation_angle=rotation_angle+360;}
-
+            Log.e("평균값", Float.toString(rotation_angle));
             if(last_angle==0){
                 last_angle=rotation_angle;
             }
@@ -123,6 +119,7 @@ public class lib_test extends AppCompatActivity implements SensorEventListener, 
             count+=1;
         }
     }
+
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {

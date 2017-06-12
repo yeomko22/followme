@@ -17,6 +17,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.interfaces.ShowRoute;
+import com.example.junny.followme_realbeta.response.ShowRouteRes;
 import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -41,6 +43,16 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+
+import static com.example.junny.followme_realbeta.R.id.start_point;
+import static com.example.junny.followme_realbeta.staticValues.gRouteKey;
+import static com.example.junny.followme_realbeta.staticValues.mLastLat;
+import static com.example.junny.followme_realbeta.staticValues.mLastLong;
 import static com.example.junny.followme_realbeta.staticValues.middle_point;
 import static com.example.junny.followme_realbeta.staticValues.to_lat;
 import static com.example.junny.followme_realbeta.staticValues.to_long;
@@ -48,11 +60,13 @@ import static com.example.junny.followme_realbeta.staticValues.to_title;
 import static com.example.junny.followme_realbeta.staticValues.walk_guide_text;
 
 public class show_route_activity extends FragmentActivity implements OnMapReadyCallback {
+    //상단 뷰 요소들
     private TextView start_point_view;
     private TextView end_point_view;
     private ImageView bus_image;
     private ImageView walk_image;
 
+    //하단 뷰 요소들
     private TextView bottom_type;
     private TextView bottom_time;
     private TextView bottom_distance;
@@ -63,29 +77,45 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     private FragmentManager fm;
     private HttpURLConnection conn;
 
+    //구글 맵 변수들
     private GoogleMap show_Map;
     private Handler mHandler;
 
+    //티맵 변수들
     private TMapData tMapData;
     private TMapPoint tMap_start;
     private TMapPoint tMap_end;
 
-    private PolylineOptions walkOptions;
-    private Resources res;
+    //라인 그려주는 변수들
+    private Resources resources;
     private String last_stop;
     private JSONArray features;
     private boolean contain_transit;
 
+    //이 둘의 차이점은 뭐지..?
+    private PolylineOptions walkOptions;
     private PolylineOptions walk_poly_options;
+
+    private Retrofit retro_transit;
+    private Retrofit retro_walk;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.show_route_activity);
 
-        res=getResources();
+        resources=getResources();
+        retro_transit=new Retrofit.Builder()
+                .baseUrl("https://maps.googleapis.com/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        
+        retro_walk=new Retrofit.Builder()
+                .baseUrl("https://maps.googleapis.com/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
 
-        start_point_view=(TextView)findViewById(R.id.start_point);
+        start_point_view=(TextView)findViewById(start_point);
         end_point_view=(TextView)findViewById(R.id.end_point);
         bus_image=(ImageView)findViewById(R.id.transport_bus);
         walk_image=(ImageView)findViewById(R.id.transport_walk);
@@ -96,8 +126,6 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
         bottom_type=(TextView)findViewById(R.id.show_route_type);
         bottom_time=(TextView)findViewById(R.id.show_route_time);
         bottom_distance=(TextView)findViewById(R.id.show_route_distance);
-
-        Intent intent=getIntent();
 
         mHandler=new Handler();
         tMap_start=new TMapPoint(staticValues.mLastLat, staticValues.mLastLong);
@@ -195,9 +223,9 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                 getWalk();
                 break;
         }
-
     }
     public void getTransit(){
+        //현재 모드 바꿔주기
         bus_image.setImageResource(R.drawable.bus_active);
         walk_image.setImageResource(R.drawable.walk_passive);
         cur_mode="bus";
@@ -206,123 +234,87 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
             show_Map.clear();
         }
 
-        AsyncTask.execute(new Runnable() {
+        ShowRoute retro_showRoute=retro_transit.create(ShowRoute.class);
+        Call<ShowRouteRes> call = retro_showRoute.showRoute(gRouteKey,"ko","transit",mLastLat+","+mLastLong,to_lat+","+to_long);
+        call.enqueue(new Callback<ShowRouteRes>() {
             @Override
-            public void run() {
-                try{
-
-                    //다음 로컬 api를 사용https://apis.daum.net/local/v1/search/keyword.json?apikey=5a3b393c51ad7571d6a92599bd57a77e&query=%ED%99%8D%EB%8C%80
-                    String str_url="https://maps.googleapis.com/maps/api/directions/json?origin="+
-                            staticValues.mLastLat+","+staticValues.mLastLong+"&destination="+to_lat+","+to_long+
-                            "&mode=transit&language=ko&key=AIzaSyBAy4VmTHyOCI1e_XvXwRlNn7pqwKU0t7o";
-                    Log.e("url",str_url);
-                    URL url=new URL(str_url);
-
-                    conn=(HttpURLConnection)url.openConnection();
-                    conn.setRequestMethod("POST");
-                    conn.setDoInput(true);
-                    conn.setDoOutput(true);
-                    conn.setConnectTimeout(2000);
-                    conn.connect();
-
-                    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(),"UTF-8"));
-                    StringBuilder sb=new StringBuilder();
-                    String line=null;
-                    while((line=br.readLine())!=null){
-                        sb.append(line);
-                    }
-                    String jsonString=sb.toString();
-                    JSONObject totalObject=new JSONObject(jsonString);
-                    JSONArray routeArray=new JSONArray(totalObject.getString("routes"));
-                    JSONObject routeObject=routeArray.getJSONObject(0);
-                    JSONArray legs=new JSONArray(routeObject.getString("legs"));
-                    JSONObject overview_poly=new JSONObject(routeObject.getString("overview_polyline"));
-
-                    final List<LatLng> polylines=decodePoly(overview_poly.getString("points"));
-
-                    final JSONObject legsObject=legs.getJSONObject(0);
-                    JSONArray steps=new JSONArray(legsObject.getString("steps"));
-                    int walk_time=0;
-                    final ArrayList<String> line_num_list=new ArrayList<String>();
-                    final ArrayList<String> line_name_list=new ArrayList<String>();
-                    contain_transit=false;
-                    for(int i=0;i<steps.length();i++){
-                        JSONObject step_detail=steps.getJSONObject(i);
-                        if(step_detail.getString("travel_mode").equals("TRANSIT")){
-                            contain_transit=true;
-                            JSONObject transit_detail=step_detail.getJSONObject("transit_details");
-                            String org_name=new JSONObject(transit_detail.getString("line")).getString("short_name");
-                            Log.e("타입",org_name);
-                            if(org_name.contains("호선")){
-                                line_num_list.add(org_name.substring(0,1));
-                            }
-                            else{
-                                line_num_list.add(org_name);
-                            }
-
-                            String org_dep=new JSONObject(transit_detail.getString("departure_stop")).getString("name");
-                            line_name_list.add(org_dep.split(" ")[0]);
-
-                            last_stop=new JSONObject(transit_detail.getString("arrival_stop")).getString("name");
+            public void onResponse(Call<ShowRouteRes> call, Response<ShowRouteRes> response) {
+                if(response.isSuccessful()){
+                    ShowRouteRes res = response.body();
+                    Log.e("요청 보기",response.toString());
+                    try{
+                        final List<LatLng> polylines=decodePoly(res.get_poly());
+                        PolylineOptions rectOptions = new PolylineOptions();
+                        for(int i=0;i<polylines.size();i++){
+                            rectOptions.add(polylines.get(i));
                         }
-                        else{
-                            walk_time+=Integer.parseInt(new JSONObject(step_detail.getString("duration")).getString("value"));
+                        show_Map.addPolyline(rectOptions);
+
+                        final ArrayList<String> line_num_list=new ArrayList<String>();
+                        final ArrayList<String> line_name_list=new ArrayList<String>();
+                        int walk_time=0;
+                        for(int i=0;i<res.get_legs_count();i++) {
+                            if (res.get_type(i).equals("TRANSIT")) {
+                                contain_transit = true;
+                                String transit_name = res.get_line(i);
+                                if (transit_name.contains("호선")) {
+                                    line_num_list.add(transit_name.substring(0, 1));
+                                } else {
+                                    line_num_list.add(transit_name);
+                                }
+
+                                line_name_list.add(res.get_start_name(i).split(" ")[0]);
+                                last_stop = res.get_stop_name(i);
+                            } else {
+                                walk_time += Integer.parseInt(res.get_walk_time(i));
+                            }
                         }
-                    }
 
-                    mHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            try{
-                                if(!contain_transit){
-                                    Toast.makeText(show_route_activity.this,"가까운 거리는 도보 경로를 이용해주세요", Toast.LENGTH_LONG).show();
-                                    getWalk();
-                                    return;
-                                }
-                                JSONObject distance_obj=new JSONObject(legsObject.getString("distance"));
-                                bottom_distance.setText(distance_obj.getString("text"));
-                                JSONObject time_obj=new JSONObject(legsObject.getString("duration"));
-                                bottom_time.setText(time_obj.getString("text"));
+                        if(!contain_transit){
+                            Toast.makeText(show_route_activity.this,"가까운 거리는 도보 경로를 이용해주세요", Toast.LENGTH_LONG).show();
+                            getWalk();
+                            return;
+                        }
 
-                                PolylineOptions rectOptions = new PolylineOptions();
-                                for(int i=0;i<polylines.size();i++){
-                                    rectOptions.add(polylines.get(i));
-                                }
-                                LayoutInflater inflater=(LayoutInflater)show_route_activity.this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-                                for(int i=0;i<line_num_list.size();i++){
-                                    LinearLayout added_item=(LinearLayout) inflater.inflate(R.layout.line_background,null);
-                                    ((TextView) added_item.findViewById(R.id.num)).setText(line_num_list.get(i));
-                                    ((TextView) added_item.findViewById(R.id.name)).setText(line_name_list.get(i));
-                                    switch (line_num_list.get(i)){
+                        bottom_distance.setText(res.get_total_distance());
+                        bottom_time.setText(res.get_total_time());
+
+                        LayoutInflater inflater=(LayoutInflater)show_route_activity.this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                        for(int i=0;i<line_num_list.size();i++){
+                            Log.e("아이템을 만들긴함",Integer.toString(line_name_list.size()));
+                            LinearLayout added_item=(LinearLayout) inflater.inflate(R.layout.line_background,null);
+                            ((TextView) added_item.findViewById(R.id.num)).setText(line_num_list.get(i));
+                            ((TextView) added_item.findViewById(R.id.name)).setText(line_name_list.get(i));
+                            switch (line_num_list.get(i)){
                                         case "1":
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_1));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(resources.getDrawable(R.drawable.line_1));
                                             break;
                                         case "2":
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_2));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(resources.getDrawable(R.drawable.line_2));
                                             break;
                                         case "3":
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_3));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(resources.getDrawable(R.drawable.line_3));
                                             break;
                                         case "4":
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_4));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(resources.getDrawable(R.drawable.line_4));
                                             break;
                                         case "5":
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_5));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(resources.getDrawable(R.drawable.line_5));
                                             break;
                                         case "6":
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_6));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(resources.getDrawable(R.drawable.line_6));
                                             break;
                                         case "7":
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_7));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(resources.getDrawable(R.drawable.line_7));
                                             break;
                                         case "8":
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_8));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(resources.getDrawable(R.drawable.line_8));
                                             break;
                                         case "9":
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_9));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(resources.getDrawable(R.drawable.line_9));
                                             break;
                                         default:
-                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(res.getDrawable(R.drawable.line_bus));
+                                            ((TextView) added_item.findViewById(R.id.num)).setBackground(resources.getDrawable(R.drawable.line_bus));
                                             break;
                                     }
                                     if(i<2){
@@ -344,32 +336,25 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                 show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
                                 show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
                                 show_Map.addPolyline(rectOptions);
-                            }
-                            catch (Exception e){
-                                StringWriter sw = new StringWriter();
-                                e.printStackTrace(new PrintWriter(sw));
-                                String exceptionAsStrting = sw.toString();
-                                Log.e("예외발생", exceptionAsStrting);
-                            }
-
-                            return;
-                        }
-                    });
-                }
-                catch(Exception e){
-                    StringWriter sw = new StringWriter();
-                    e.printStackTrace(new PrintWriter(sw));
-                    String exceptionAsStrting = sw.toString();
-                    Log.e("예외발생", exceptionAsStrting);
-                }
-                finally {
-                    if(conn!=null){
-                        conn.disconnect();
                     }
-                    return;
+                    catch(Exception e){
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        String exceptionAsStrting = sw.toString();
+                        Log.e("예외발생", exceptionAsStrting);
+                    }
+                }
+                else{
+                    Log.e("에러 메세지", response.toString());
                 }
             }
+
+            @Override
+            public void onFailure(Call<ShowRouteRes> call, Throwable t) {
+                Log.e("실패원인",t.toString());
+            }
         });
+
     }
     //구글 폴리라인 인코딩 해석기, 점들의 리스트를 리턴해준다
     private List<LatLng> decodePoly(String encoded) {
@@ -404,7 +389,6 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
         }
         return poly;
     }
-
 
     public void getWalk() {
         bus_image.setImageResource(R.drawable.bus_passive);
@@ -443,6 +427,8 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                 });
             }
         });
+
+
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {
@@ -532,8 +518,6 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
     }
 
     public void set_camera(View v){
-//        Intent intent=new Intent(show_route_activity.this,ar_activity.class);
-//        startActivity(intent);
         if((staticValues.walk_guide_latlng!=null)&&(walk_guide_text!=null)&&
                 (staticValues.walk_all_latlng!=null)&&(staticValues.walk_guide_latlng.size()>3)){
             Intent intent=new Intent(show_route_activity.this,ar_activity.class);

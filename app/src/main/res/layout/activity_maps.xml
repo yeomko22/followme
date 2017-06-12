@@ -59,13 +59,21 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1.5"
-            android:gravity="center_horizontal">
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginTop="20dp"
-                android:onClick="reset_curlocation"
-                android:src="@drawable/reload" />
+            android:gravity="center_horizontal"
+            android:weightSum="2"
+            android:orientation="vertical">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:gravity="center"
+                android:layout_weight="1">
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:onClick="reset_curlocation"
+                    android:src="@drawable/reload" />
+            </LinearLayout>
+
         </LinearLayout>
 
     </LinearLayout>

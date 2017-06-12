@@ -260,15 +260,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 public void onResponse(Call<ReverseGeoRes> call, Response<ReverseGeoRes> response) {
                     if(response.isSuccessful()){
                         ReverseGeoRes res = response.body();
-                        Log.e("성공적인 바디",response.body().toString());
-                        // 받아온 리스트를 순회하면서
+                        Log.e("요청 보기",response.toString());
                         try{
                             String cur_address=res.getAddress();
                             cur_address=cur_address.replace("대한민국", "");
-                            if(cur_address.contains("서울특별시 ")){
-                                cur_address=cur_address.replace("서울특별시 ","");
+                            if(cur_address.contains("서울특별시")){
+                                cur_address=cur_address.replace("서울특별시","");
                             }
+                            cur_address=cur_address.trim();
                             start_point.setText(cur_address);
+                            staticValues.cur_address=cur_address;
                         }
                         catch(Exception e){
                             StringWriter sw = new StringWriter();
@@ -349,5 +350,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //T맵 api 연결
         TMapTapi tMapTapi = new TMapTapi(this);
         tMapTapi.setSKPMapAuthentication("4004a4c7-8e67-3c17-88d9-9799c613ecc7");
+    }
+
+    public void go_test(View v){
+        Intent intent=new Intent(MapsActivity.this, lib_test.class);
+        startActivity(intent);
     }
 }
