@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Geocoder;
+import android.location.Location;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -52,8 +53,7 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 import static com.example.junny.followme_realbeta.staticValues.gMapKey;
-import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
-import static com.example.junny.followme_realbeta.staticValues.mLocationRequest;
+import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -62,20 +62,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private Geocoder geocoder;
     private Marker mMarker;
-    private LocationListener locationListener;
+
+    //구글 장소 리퀘스트 변수들
+    private MyLoactionListener myLocationListener;
+    private LocationRequest myLocationRequest;
+
 
     //통신 요소들
     private GoogleApiClient mGoogleApiClient;
-
-    //레트로핏
     private Retrofit retrofit;
-
-    //핸들러
-    private android.os.Handler mHandler;
 
     //액티비티 뷰 요소들
     private TextView start_point;
-    private TextView end_point;
 
     //네트워크, GPS 사용 가능 여부 확인 변수들
     private boolean isGPSEnable=false;
@@ -92,16 +90,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Intent intent=new Intent(MapsActivity.this, SplashActivity.class);
         startActivity(intent);
 
-        locationManager=(LocationManager) getSystemService(Context.LOCATION_SERVICE);
         conn_manager=(ConnectivityManager)MapsActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
-
+        locationManager=(LocationManager)MapsActivity.this.getSystemService(Context.LOCATION_SERVICE);
         start_point=(TextView)findViewById(R.id.start_point);
-        mHandler=new android.os.Handler();
 
-        start_point=(TextView)findViewById(R.id.start_point);
-        end_point=(TextView)findViewById(R.id.end_point);
         staticValues.mapFragment=(SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.map);
-
         staticValues.mapFragment.getMapAsync(this);
 
         //레트로핏 객체를 만들 때에 기본적인 유알엘을 정의
@@ -214,14 +207,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onResume();
     }
 
-    //이건 나중에 리퀘스트로 바꿀때 사용할 코드
-    protected void createLocationRequest() {
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(10000);
-        mLocationRequest.setFastestInterval(5000);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-    }
-
     //구글맵 설정 콜백
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -231,69 +216,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //구글 api 연결 콜백
     @Override
     public void onConnected(@Nullable Bundle connnectionHint) {
-        Log.e("온커넥티드 호출됨","빼애애앰");
+        Log.e("구글 API 연결됨","11");
         if(ContextCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},0);
         }
         createLocationRequest();
-        staticValues.mLastLocation=LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-        if(mLastLocation!=null){
-            Log.e("위치 잘 받아옴","온커넥트");
-            Log.e("받아온 경도", Double.toString(mLastLocation.getLatitude()));
-            Log.e("받아온 위도", Double.toString(mLastLocation.getLongitude()));
-
-            //일단 스태틱에 위치 저장, 이게 불필요한지 확인해서 제거할 것
-            staticValues.mLastLat=mLastLocation.getLatitude();
-            staticValues.mLastLong=mLastLocation.getLongitude();
-            staticValues.mLastLatLong=new LatLng(staticValues.mLastLat, staticValues.mLastLong);
-
-            LatLng cur_location=new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-            Log.e("mMap검사", mMap.toString());
-            mMap.addMarker(new MarkerOptions().position(cur_location).title("내 위치"));
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(cur_location,18));
-
-
-            ReverseGeo retro_geo=retrofit.create(ReverseGeo.class);
-            Call<ReverseGeoRes> call = retro_geo.reverseGeo(gMapKey,"ko",Double.toString(staticValues.mLastLat)+","+Double.toString(staticValues.mLastLong));
-            call.enqueue(new Callback<ReverseGeoRes>() {
-                @Override
-                public void onResponse(Call<ReverseGeoRes> call, Response<ReverseGeoRes> response) {
-                    if(response.isSuccessful()){
-                        ReverseGeoRes res = response.body();
-                        Log.e("요청 보기",response.toString());
-                        try{
-                            String cur_address=res.getAddress();
-                            cur_address=cur_address.replace("대한민국", "");
-                            if(cur_address.contains("서울특별시")){
-                                cur_address=cur_address.replace("서울특별시","");
-                            }
-                            cur_address=cur_address.trim();
-                            start_point.setText(cur_address);
-                            staticValues.cur_address=cur_address;
-                        }
-                        catch(Exception e){
-                            StringWriter sw = new StringWriter();
-                            e.printStackTrace(new PrintWriter(sw));
-                            String exceptionAsStrting = sw.toString();
-                            Log.e("예외발생", exceptionAsStrting);
-                        }
-                    }
-                    else{
-                        Log.e("에러 메세지", response.toString());
-                    }
-                }
-
-                @Override
-                public void onFailure(Call<ReverseGeoRes> call, Throwable t) {
-                    Log.e("실패원인",t.toString());
-                }
-            });
-        }
-       else{
-            Log.e("위치 못잡음","얘 정신 못차린다");
-            LatLng seoul=new LatLng(37.5665, 126.9780);
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(seoul,10));
-        }
+        myLocationListener=new MyLoactionListener();
+        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, myLocationRequest, myLocationListener);
     }
 
     @Override
@@ -352,8 +281,77 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         tMapTapi.setSKPMapAuthentication("4004a4c7-8e67-3c17-88d9-9799c613ecc7");
     }
 
-    public void go_test(View v){
-        Intent intent=new Intent(MapsActivity.this, lib_test.class);
-        startActivity(intent);
+    //로케이션리퀘스트 생성 함수, 10초에 한번씩 감지하도록 설정
+    protected void createLocationRequest() {
+        myLocationRequest = new LocationRequest();
+        myLocationRequest.setInterval(5000);
+        myLocationRequest.setFastestInterval(2500);
+        myLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+    }
+
+    class MyLoactionListener implements LocationListener{
+        @Override
+        public void onLocationChanged(Location location) {
+            float cur_accuracy=location.getAccuracy();
+            Log.e("정확도",Float.toString(cur_accuracy));
+            if(cur_accuracy>0&&cur_accuracy<=25){
+                Log.e("유효","11");
+
+                //잡아낸 변수 스태틱에 전달
+                staticValues.mLastLocation=location;
+                staticValues.mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
+                staticValues.mLastLat=location.getLatitude();
+                staticValues.mLastLong=location.getLongitude();
+
+                //지도 상에 현 위치 표시
+                mMap.addMarker(new MarkerOptions().position(mLastLatLong));
+                mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치"));
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mLastLatLong,18));
+
+                //잡아낸 좌표로 통신해서 주소 값 받아오기 레트로핏
+                ReverseGeo retro_geo=retrofit.create(ReverseGeo.class);
+                Call<ReverseGeoRes> call = retro_geo.reverseGeo(gMapKey,"ko",Double.toString(staticValues.mLastLat)+","+Double.toString(staticValues.mLastLong));
+                call.enqueue(new Callback<ReverseGeoRes>() {
+                    @Override
+                    public void onResponse(Call<ReverseGeoRes> call, Response<ReverseGeoRes> response) {
+                        if(response.isSuccessful()){
+                            ReverseGeoRes res = response.body();
+                            Log.e("요청 보기",response.toString());
+                            try{
+                                String cur_address=res.getAddress();
+                                cur_address=cur_address.replace("대한민국", "");
+                                if(cur_address.contains("서울특별시")){
+                                    cur_address=cur_address.replace("서울특별시","");
+                                }
+                                cur_address=cur_address.trim();
+                                start_point.setText(cur_address);
+                                staticValues.cur_address=cur_address;
+                            }
+                            catch(Exception e){
+                                StringWriter sw = new StringWriter();
+                                e.printStackTrace(new PrintWriter(sw));
+                                String exceptionAsStrting = sw.toString();
+                                Log.e("예외발생", exceptionAsStrting);
+                            }
+                        }
+                        else{
+                            Log.e("에러 메세지", response.toString());
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<ReverseGeoRes> call, Throwable t) {
+                        Log.e("실패원인",t.toString());
+                    }
+                });
+
+                //첫 번째 값 받아오고 센서 해지하기
+                LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, myLocationListener);
+                ((TextView)findViewById(R.id.loading_text)).setVisibility(View.INVISIBLE);
+            }
+            else{
+                Log.e("무효",Float.toString(cur_accuracy));
+            }
+        }
     }
 }

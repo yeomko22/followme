@@ -221,6 +221,18 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     ShowRouteRes res = response.body();
                     Log.e("요청 보기",response.toString());
                     try{
+                        //콜백 시작
+                        for(int i=0;i<res.get_legs_count();i++){
+                            if(res.get_type(i).equals("WALKING")){
+                                //여기서 레트로로 통신을 요청한다 하더라도 비동기 통신 -> 각각에 대한 리스폰스가 따로 놀텐데?
+                                //이거 대박 어렵다..
+                                //시작 지점만 보낼까..?
+
+                            }
+                            else{
+
+                            }
+                        }
                         final List<LatLng> polylines=decodePoly(res.get_poly());
                         PolylineOptions rectOptions = new PolylineOptions();
                         for(int i=0;i<polylines.size();i++){
@@ -303,7 +315,7 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                 }
                                 LinearLayout last_point=(LinearLayout) inflater.inflate(R.layout.line_end,null);
                                 ((TextView)(last_point.findViewById(R.id.last_name))).setText(last_stop+" 하차");
-                                if(line_num_list.size()>1){
+                                if(line_num_list.size()>2){
                                     bottom_container2.addView(last_point);
                                 }
                                 else{
