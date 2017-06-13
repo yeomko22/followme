@@ -77,14 +77,30 @@
         </LinearLayout>
 
     </LinearLayout>
-
-    <fragment
-        android:id="@+id/map"
-        android:name="com.google.android.gms.maps.SupportMapFragment"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="8"
-        tools:context="com.example.junny.followme_realbeta.activity.MapsActivity" />
+        android:layout_weight="8">
+
+        <fragment
+            android:id="@+id/map"
+            android:name="com.google.android.gms.maps.SupportMapFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            tools:context="com.example.junny.followme_realbeta.activity.MapsActivity" />
+
+        <TextView
+            android:id="@+id/loading_text"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:textAlignment="center"
+            android:layout_gravity="center"
+            android:text="위치를 잡지 못헀습니다\n새로고침을 눌러주세요"
+            android:textSize="20dp"
+            android:lineSpacingExtra="5dp"
+            android:textColor="@color/white"/>
+
+    </FrameLayout>
 
 
 </LinearLayout>

@@ -78,7 +78,6 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
 
     private Switch switch_vibe1;
     private Switch switch_vibe2;
-    private Switch switch_auto;
     private Switch switch_tour;
     private Switch switch_tourAR;
 
@@ -127,7 +126,6 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
         if(!pref.getString("personal_setting","").equals("setting")){
             editor.putString("setting_fore_vibe","on");
             editor.putString("setting_back_vibe","on");
-            editor.putString("setting_auto","on");
             editor.putString("setting_tour","on");
             editor.putString("setting_tourAR","on");
             editor.putString("personal_setting","setting");
@@ -136,15 +134,13 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
         }
         mVibe= (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
 
-        switch_vibe1=(Switch)findViewById(R.id.switch_vibe1);
-        switch_vibe2=(Switch)findViewById(R.id.switch_vibe2);
-        switch_auto=(Switch)findViewById(R.id.switch_auto);
-        switch_tour=(Switch)findViewById(R.id.switch_tourpush);
+        switch_vibe1=(Switch)findViewById(R.id.switch_fore_vibe);
+        switch_vibe2=(Switch)findViewById(R.id.switch_back_vibe);
+        switch_tour=(Switch)findViewById(R.id.switch_tour);
         switch_tourAR=(Switch)findViewById(R.id.switch_tourAR);
 
         switch_vibe1.setChecked(pref.getString("setting_fore_vibe","").equals("on"));
         switch_vibe2.setChecked(pref.getString("setting_back_vibe","").equals("on"));
-        switch_auto.setChecked(pref.getString("setting_auto_vibe","").equals("on"));
         switch_tour.setChecked(pref.getString("setting_tour","").equals("on"));
         switch_tourAR.setChecked(pref.getString("setting_tourAR","").equals("on"));
 
