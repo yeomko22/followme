@@ -213,6 +213,33 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     ShowRouteRes res = response.body();
                     Log.e("요청 보기",response.toString());
                     try{
+                        final ArrayList<String> line_num_list=new ArrayList<String>();
+                        final ArrayList<String> line_name_list=new ArrayList<String>();
+                        int walk_time=0;
+                        for(int i=0;i<res.get_legs_count();i++) {
+                            if (res.get_type(i).equals("TRANSIT")) {
+                                contain_transit = true;
+                                String transit_name = res.get_line(i);
+                                if (transit_name.contains("호선")) {
+                                    line_num_list.add(transit_name.substring(0, 1));
+                                } else {
+                                    line_num_list.add(transit_name);
+                                }
+
+                                line_name_list.add(res.get_start_name(i).split(" ")[0]);
+                                last_stop = res.get_stop_name(i);
+                            } else {
+                                walk_time += Integer.parseInt(res.get_walk_time(i));
+                            }
+                        }
+
+                        if(!contain_transit){
+                            Toast.makeText(show_route_activity.this,"가까운 거리는 도보 경로를 이용해주세요", Toast.LENGTH_LONG).show();
+                            getWalk();
+                            return;
+                        }
+
+
                         final List<LatLng> polylines=decodePoly(res.get_poly());
                         final PolylineOptions rectOptions = new PolylineOptions();
 
@@ -362,32 +389,6 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
 
                                 }
                             });
-                        }
-
-                        final ArrayList<String> line_num_list=new ArrayList<String>();
-                        final ArrayList<String> line_name_list=new ArrayList<String>();
-                        int walk_time=0;
-                        for(int i=0;i<res.get_legs_count();i++) {
-                            if (res.get_type(i).equals("TRANSIT")) {
-                                contain_transit = true;
-                                String transit_name = res.get_line(i);
-                                if (transit_name.contains("호선")) {
-                                    line_num_list.add(transit_name.substring(0, 1));
-                                } else {
-                                    line_num_list.add(transit_name);
-                                }
-
-                                line_name_list.add(res.get_start_name(i).split(" ")[0]);
-                                last_stop = res.get_stop_name(i);
-                            } else {
-                                walk_time += Integer.parseInt(res.get_walk_time(i));
-                            }
-                        }
-
-                        if(!contain_transit){
-                            Toast.makeText(show_route_activity.this,"가까운 거리는 도보 경로를 이용해주세요", Toast.LENGTH_LONG).show();
-                            getWalk();
-                            return;
                         }
 
                         bottom_distance.setText(res.get_total_distance());

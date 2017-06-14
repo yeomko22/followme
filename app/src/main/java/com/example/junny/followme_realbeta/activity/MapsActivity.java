@@ -282,7 +282,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         tMapTapi.setSKPMapAuthentication("4004a4c7-8e67-3c17-88d9-9799c613ecc7");
     }
 
-    //로케이션리퀘스트 생성 함수, 10초에 한번씩 감지하도록 설정
+    //로케이션리퀘스트 생성 함수, 5초에 한번씩 감지하도록 설정
     protected void createLocationRequest() {
         myLocationRequest = new LocationRequest();
         myLocationRequest.setInterval(5000);
