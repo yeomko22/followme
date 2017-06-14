@@ -251,14 +251,8 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
     public void onBackPressed(){
         //백 버튼 눌렀을 경우 바로 길 안내가 종료되지 않도록 다이얼로그 설정
         final AlertDialog.Builder alertDialog = new AlertDialog.Builder(ar_activity.this);
-        alertDialog.setMessage("길 안내를 종료합니다 \n 길 안내 푸쉬 알림을 받으시겠습니까?");
-        alertDialog.setNegativeButton("알림 받기", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                ar_activity.super.onBackPressed();
-            }
-        });
-        alertDialog.setNeutralButton("완전 종료", new DialogInterface.OnClickListener(){
+        alertDialog.setMessage("길 안내를 종료하시겠습니까?");
+        alertDialog.setNegativeButton("종료하기", new DialogInterface.OnClickListener(){
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 ar_activity.super.onBackPressed();
