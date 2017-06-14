@@ -28,6 +28,7 @@ import android.widget.Toast;
 import com.example.junny.followme_realbeta.R;
 import com.example.junny.followme_realbeta.interfaces.ReverseGeo;
 import com.example.junny.followme_realbeta.response.ReverseGeoRes;
+import com.example.junny.followme_realbeta.service.NotifyService;
 import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -289,6 +290,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         myLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
+    public void back_start(View v){
+        Toast.makeText(getApplicationContext(),"Service 시작",Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(MapsActivity.this, NotifyService.class);
+        startService(intent);
+    }
+    public void back_end(View v){
+        Toast.makeText(getApplicationContext(),"Service 멈춤",Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(MapsActivity.this, NotifyService.class);
+        stopService(intent);
+    }
+
     class MyLoactionListener implements LocationListener{
         @Override
         public void onLocationChanged(Location location) {
@@ -346,7 +358,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 });
 
                 //첫 번째 값 받아오고 센서 해지하기
-                LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, myLocationListener);
+                if(mGoogleApiClient.isConnected()&&myLocationListener!=null){
+                    LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, myLocationListener);
+                }
                 ((TextView)findViewById(R.id.loading_text)).setVisibility(View.INVISIBLE);
             }
             else{

@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.activity.ar_activity;
 import com.example.junny.followme_realbeta.staticValues;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -28,6 +29,7 @@ import static com.example.junny.followme_realbeta.staticValues.to_latlng;
 public class fragment_map extends android.support.v4.app.Fragment implements OnMapReadyCallback{
     public GoogleMap mMap;
     public Marker myPosition;
+    public ar_activity mActivity;
     public fragment_map() {
     }
 
@@ -40,6 +42,7 @@ public class fragment_map extends android.support.v4.app.Fragment implements OnM
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_map, container, false);
+        mActivity=(ar_activity) getActivity();
         SupportMapFragment mapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.map_fragment);
         mapFragment.getMapAsync(this);
         return view;
@@ -51,8 +54,8 @@ public class fragment_map extends android.support.v4.app.Fragment implements OnM
         myPosition=mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치").icon(BitmapDescriptorFactory.fromResource(R.drawable.green_arrow)));
         mMap.addMarker(new MarkerOptions().position(to_latlng).title("도착점"));
 
-        for(int i=0;i<staticValues.walk_guide_latlng.size();i++){
-            mMap.addMarker(new MarkerOptions().position(staticValues.walk_guide_latlng.get(i)).icon(BitmapDescriptorFactory.fromResource(R.drawable.pinholder)));
+        for(int i=0;i<mActivity.cur_guide_latlng.size();i++){
+            mMap.addMarker(new MarkerOptions().position(mActivity.cur_guide_latlng.get(i)).icon(BitmapDescriptorFactory.fromResource(R.drawable.pinholder)));
         }
         set_zoom();
         mMap.addPolyline(staticValues.cur_poly);

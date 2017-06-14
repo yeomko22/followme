@@ -64,8 +64,13 @@
         <activity
             android:name=".activity.SplashActivity"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
-        <activity android:name=".activity.SensorActivity" />
-        <activity android:name=".activity.lib_test"></activity>
+
+        <service
+            android:name=".service.NotifyService"
+            android:enabled="true"
+            android:exported="true" />
+
+        <activity android:name=".activity.lib_test" />
     </application>
 
 </manifest>

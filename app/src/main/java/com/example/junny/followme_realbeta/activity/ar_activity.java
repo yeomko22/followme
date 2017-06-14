@@ -3,6 +3,7 @@ package com.example.junny.followme_realbeta.activity;
 import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -33,6 +34,7 @@ import com.example.junny.followme_realbeta.R;
 import com.example.junny.followme_realbeta.fragment.fragment_ar;
 import com.example.junny.followme_realbeta.fragment.fragment_map;
 import com.example.junny.followme_realbeta.sensors.Orientation;
+import com.example.junny.followme_realbeta.service.NotifyService;
 import com.example.junny.followme_realbeta.staticValues;
 import com.example.junny.followme_realbeta.utils.OrientationSensorInterface;
 import com.google.android.gms.common.ConnectionResult;
@@ -44,8 +46,12 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.skp.Tmap.TMapTapi;
 
+import java.util.ArrayList;
+
 import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
 import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
+import static com.example.junny.followme_realbeta.staticValues.walk_guide_latlng;
+import static com.example.junny.followme_realbeta.staticValues.walk_guide_text;
 
 public class ar_activity extends FragmentActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, OrientationSensorInterface{
 
@@ -81,6 +87,10 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
     private Switch switch_tour;
     private Switch switch_tourAR;
 
+    private String cur_mode;
+    public ArrayList<LatLng> cur_guide_latlng;
+    public ArrayList<String> cur_guide_text;
+
     //진동 변수
     Vibrator mVibe;
 
@@ -89,10 +99,22 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
     SharedPreferences.Editor editor;
     private boolean is_initi=false;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.ar_activity);
+
+        Intent intent=getIntent();
+        cur_mode=intent.getStringExtra("type");
+        if(cur_mode.equals("walk")){
+            cur_guide_latlng= walk_guide_latlng;
+            cur_guide_text= walk_guide_text;
+        }
+        else{
+            cur_guide_latlng=staticValues.transit_guide_latlng;
+            cur_guide_text=staticValues.transit_guide_text;
+        }
 
         //센서 활성화
         orientationSensor=new Orientation(ar_activity.this, this);
@@ -255,6 +277,9 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
         alertDialog.setNegativeButton("알림 받기", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                //서비스를 시작
+                Intent intent = new Intent(ar_activity.this, NotifyService.class);
+                startService(intent);
                 ar_activity.super.onBackPressed();
             }
         });
@@ -288,7 +313,7 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
             ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
         }
         guide_num.setText("1");
-        guide_text.setText(staticValues.walk_guide_text.get(0));
+        guide_text.setText(cur_guide_text.get(0));
     }
 
     //로케이션리퀘스트 생성 함수, 10초에 한번씩 감지하도록 설정
@@ -322,7 +347,7 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
                 //다음 체크 포인트에 도착했는지를 확인, 도착했을 경우 변수들 변경
                 if(check_position(mLastLatLong)){
                     guide_num.setText(Integer.toString(cur_point));
-                    guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
+                    guide_text.setText(cur_guide_text.get(cur_point-1));
                     if(pref.getString("setting_fore_vibe","").equals("on")){
                         mVibe.vibrate(500);
                     }
@@ -357,17 +382,18 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
         Location next=new Location("next");
         from.setLatitude(cur_position.latitude);
         from.setLongitude(cur_position.longitude);
-        to.setLatitude(staticValues.walk_guide_latlng.get(cur_point).latitude);
-        to.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
+        to.setLatitude(cur_guide_latlng.get(cur_point).latitude);
+        to.setLongitude(cur_guide_latlng.get(cur_point).longitude);
         //이전 거리와 지금 거리의 차이 - 이동 거리 - 이걸 토탈에서 빼주자
         float distance=from.distanceTo(to);
         if(distance<25){
             cur_point+=1;
-            if(staticValues.walk_guide_latlng.size()>cur_point){
+            staticValues.static_cur_point+=1;
+            if(cur_guide_latlng.size()>cur_point){
                 //포인트 지점에 도착하면, 해당 지점과 시작점 사이의 거리만큼을 빼주면 된다 현재 거리와 별개 전체 거리에서
                 //이전 키포인트에서 지금 키포인트사이의 거리만큼을 빼준다? 노노 직선거리잖아 직선과 곡선 차이때문에 나는 차이일 듯
-                next.setLatitude(staticValues.walk_guide_latlng.get(cur_point).latitude);
-                next.setLongitude(staticValues.walk_guide_latlng.get(cur_point).longitude);
+                next.setLatitude(cur_guide_latlng.get(cur_point).latitude);
+                next.setLongitude(cur_guide_latlng.get(cur_point).longitude);
                 past_distance=from.distanceTo(next);
                 staticValues.last_bearing=to.bearingTo(next);
             }
@@ -384,7 +410,7 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
         }
     }
     public void next_checkpoint(View v){
-        LatLng virtual_point=staticValues.walk_guide_latlng.get(cur_point);
+        LatLng virtual_point= cur_guide_latlng.get(cur_point);
         Location virtual_location=new Location("virtual");
         virtual_location.setLatitude(virtual_point.latitude);
         virtual_location.setLongitude(virtual_point.longitude);
@@ -396,7 +422,7 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
 
         check_position(virtual_point);
         guide_num.setText(Integer.toString(cur_point));
-        guide_text.setText(staticValues.walk_guide_text.get(cur_point-1));
+        guide_text.setText(cur_guide_text.get(cur_point-1));
 
         if(staticValues.distance>1000){
             ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");

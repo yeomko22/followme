@@ -26,6 +26,40 @@ public class ShowRouteRes {
         return routes[0].legs[0].steps[i].transit_details.line.short_name;
     }
 
+    public String[] get_start_end_type(){
+        String[] res=new String[2];
+        res[0]=routes[0].legs[0].steps[0].travel_mode;
+        res[1]=routes[0].legs[0].steps[routes[0].legs[0].steps.length-1].travel_mode;
+        return res;
+    }
+    public String[] get_start_latlng(){
+        String[] res=new String[4];
+        res[0]=routes[0].legs[0].steps[0].start_location.lat;
+        res[1]=routes[0].legs[0].steps[0].start_location.lng;
+        res[2]=routes[0].legs[0].steps[0].end_location.lat;
+        res[3]=routes[0].legs[0].steps[0].end_location.lng;
+        return res;
+    }
+
+    public String[] get_end_latlng(){
+        String[] res=new String[4];
+        int index=routes[0].legs[0].steps.length-1;
+        res[0]=routes[0].legs[0].steps[index].start_location.lat;
+        res[1]=routes[0].legs[0].steps[index].start_location.lng;
+        res[2]=routes[0].legs[0].steps[index].end_location.lat;
+        res[3]=routes[0].legs[0].steps[index].end_location.lng;
+        return res;
+    }
+    public String get_description(int i){
+        return routes[0].legs[0].steps[i].html_instructions;
+    }
+    public String[] get_start_location(int i){
+        String[] res=new String[2];
+        res[0]=routes[0].legs[0].steps[i].start_location.lat;
+        res[1]=routes[0].legs[0].steps[i].start_location.lng;
+        return res;
+    }
+
     public String get_start_name(int i){
         return routes[0].legs[0].steps[i].transit_details.departure_stop.name;
     }
@@ -106,13 +140,17 @@ public class ShowRouteRes {
         String html_instructions;
         Transit_Detail transit_details;
         String travel_mode;
+        Point start_location;
+        Point end_location;
 
-        public Steps(Text_Value distance, Text_Value duration, String html_instructions, Transit_Detail transit_details, String travel_mode) {
+        public Steps(Text_Value distance, Text_Value duration, String html_instructions, Transit_Detail transit_details, String travel_mode, Point start_location, Point end_location) {
             this.distance = distance;
             this.duration = duration;
             this.html_instructions = html_instructions;
             this.transit_details = transit_details;
             this.travel_mode = travel_mode;
+            this.start_location = start_location;
+            this.end_location = end_location;
         }
     }
 
