@@ -26,10 +26,15 @@ public class staticValues {
     public static PolylineOptions cur_poly;
     public static LocationRequest mLocationRequest;
 
-    //좌표 저장 자료구조
+    //도보 경로 안내 자료 구조
     public static ArrayList<LatLng> walk_all_latlng;
     public static ArrayList<LatLng> walk_guide_latlng;
     public static ArrayList<String> walk_guide_text;
+
+    //대중교통 경로 안내 자료 구조
+    public static ArrayList<LatLng> transit_all_latlng;
+    public static ArrayList<LatLng> transit_guide_latlng;
+    public static ArrayList<String> transit_guide_text;
 
     //도착지점 변수들
     public static LatLng to_latlng;
@@ -49,6 +54,10 @@ public class staticValues {
     public static LatLng middle_point;
     public static float distance;
     public static float last_bearing;
+
+    //현재 길찾기 모드
+    public static String static_cur_mode;
+    public static int static_cur_point=0;
 
     //api 키들
     public static final String gMapKey="AIzaSyC2KPG-dhy-IqT1iBhb6W4N3WC1od4qAN0";

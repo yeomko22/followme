@@ -39,18 +39,7 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 import static com.example.junny.followme_realbeta.R.id.start_point;
-import static com.example.junny.followme_realbeta.staticValues.distance;
-import static com.example.junny.followme_realbeta.staticValues.gRouteKey;
-import static com.example.junny.followme_realbeta.staticValues.mLastLat;
-import static com.example.junny.followme_realbeta.staticValues.mLastLong;
-import static com.example.junny.followme_realbeta.staticValues.middle_point;
-import static com.example.junny.followme_realbeta.staticValues.tMapKey;
-import static com.example.junny.followme_realbeta.staticValues.to_lat;
-import static com.example.junny.followme_realbeta.staticValues.to_long;
-import static com.example.junny.followme_realbeta.staticValues.to_title;
-import static com.example.junny.followme_realbeta.staticValues.walk_all_latlng;
-import static com.example.junny.followme_realbeta.staticValues.walk_guide_latlng;
-import static com.example.junny.followme_realbeta.staticValues.walk_guide_text;
+import static com.example.junny.followme_realbeta.staticValues.*;
 
 public class show_route_activity extends FragmentActivity implements OnMapReadyCallback {
     //상단 뷰 요소들
@@ -80,6 +69,9 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
 
     private Retrofit retro_transit;
     private Retrofit retro_walk;
+
+    private boolean poly_start_set=true;
+    private boolean poly_end_set=true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -221,25 +213,6 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                     ShowRouteRes res = response.body();
                     Log.e("요청 보기",response.toString());
                     try{
-                        //콜백 시작
-                        for(int i=0;i<res.get_legs_count();i++){
-                            if(res.get_type(i).equals("WALKING")){
-                                //여기서 레트로로 통신을 요청한다 하더라도 비동기 통신 -> 각각에 대한 리스폰스가 따로 놀텐데?
-                                //이거 대박 어렵다..
-                                //시작 지점만 보낼까..?
-
-                            }
-                            else{
-
-                            }
-                        }
-                        final List<LatLng> polylines=decodePoly(res.get_poly());
-                        PolylineOptions rectOptions = new PolylineOptions();
-                        for(int i=0;i<polylines.size();i++){
-                            rectOptions.add(polylines.get(i));
-                        }
-                        show_Map.addPolyline(rectOptions);
-
                         final ArrayList<String> line_num_list=new ArrayList<String>();
                         final ArrayList<String> line_name_list=new ArrayList<String>();
                         int walk_time=0;
@@ -264,6 +237,158 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                             Toast.makeText(show_route_activity.this,"가까운 거리는 도보 경로를 이용해주세요", Toast.LENGTH_LONG).show();
                             getWalk();
                             return;
+                        }
+
+
+                        final List<LatLng> polylines=decodePoly(res.get_poly());
+                        final PolylineOptions rectOptions = new PolylineOptions();
+
+                        transit_all_latlng=new ArrayList<LatLng>();
+                        transit_guide_latlng=new ArrayList<LatLng>();
+                        transit_guide_text=new ArrayList<String>();
+
+                        for(int i=0;i<polylines.size();i++){
+                            //대중교통 경로는 다 들어가 있는 것
+                            transit_all_latlng.add(polylines.get(i));
+                        }
+                        //지시문, 주요 포인트 저장
+                        for(int i=0;i<res.get_legs_count();i++){
+                            transit_guide_text.add(res.get_description(i));
+                            String[] str_latlng=res.get_start_location(i);
+                            transit_guide_latlng.add(new LatLng(Double.parseDouble(str_latlng[0]),Double.parseDouble(str_latlng[1])));
+                        }
+
+                        //현재 지점부터 출발 지점까지의 경로 구하기
+                        String[] start_end_type=res.get_start_end_type();
+                        if(start_end_type[0].equals("WALKING")){
+                            poly_start_set=false;
+                            String[] startpoint=res.get_start_latlng();
+                            ShowWalk walkRes=retro_walk.create(ShowWalk.class);
+                            Call<ShowWalkRes> walk_call = walkRes.showWalk(tMapKey,startpoint[1],startpoint[0],startpoint[3],startpoint[2],
+                                    "start","end","WGS84GEO","WGS84GEO");
+                            walk_call.enqueue(new Callback<ShowWalkRes>() {
+                                @Override
+                                public void onResponse(Call<ShowWalkRes> call, Response<ShowWalkRes> response) {
+                                    ShowWalkRes res=response.body();
+                                    ArrayList<LatLng> tran_walk_guide_latlng=new ArrayList<LatLng>();
+                                    ArrayList<LatLng> tran_walk_all_latlng=new ArrayList<LatLng>();
+                                    ArrayList<String> tran_walk_guide_text=new ArrayList<String>();
+                                    for(int i=0;i<res.get_count();i++){
+                                        if(res.get_type(i).equals("Point")){
+                                            LatLng added_point=new LatLng(Double.parseDouble(res.get_point_lat(i)),Double.parseDouble(res.get_point_lng(i)));
+                                            tran_walk_guide_latlng.add(added_point);
+                                            tran_walk_guide_text.add(res.get_description(i));
+                                            tran_walk_all_latlng.add(added_point);
+                                        }
+                                        else{
+                                            for(int j=0;j<res.get_coor_count(i);j++){
+                                                String[] str_latlng=res.get_coor_lat(i,j);
+                                                LatLng added_point=new LatLng(Double.parseDouble(str_latlng[0]),Double.parseDouble(str_latlng[1]));
+                                                tran_walk_all_latlng.add(added_point);
+                                            }
+                                        }
+                                    }
+                                    // 도보 경로 모아놓은 곳 뒤쪽에 대중교통 경로를 붙여준다 그리고 이걸 다시 대중교통 전체 경로로 지정한다
+                                    //먼저 전체 경로 합치기, 합치기 전에 맨 앞 포인트 제거
+                                    transit_all_latlng.remove(0);
+                                    tran_walk_all_latlng.addAll(transit_all_latlng);
+                                    transit_all_latlng=tran_walk_all_latlng;
+                                    //다음 주요 포인트 합치기
+                                    transit_guide_latlng.remove(0);
+                                    tran_walk_guide_latlng.addAll(transit_guide_latlng);
+                                    transit_guide_latlng=tran_walk_guide_latlng;
+                                    //다음 텍스트 합치기
+                                    transit_guide_text.remove(0);
+                                    tran_walk_guide_text.addAll(transit_guide_text);
+                                    transit_guide_text=tran_walk_guide_text;
+
+                                    //이 작업이 다 끝났으면 지도 위에 그려주기\
+                                    poly_start_set=true;
+                                    if(poly_start_set&&poly_end_set){
+                                        for(int i=0;i<transit_all_latlng.size();i++){
+                                            rectOptions.add(transit_all_latlng.get(i));
+                                        }
+                                        show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
+                                        show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
+                                        staticValues.cur_poly=rectOptions;
+                                        show_Map.addPolyline(rectOptions);
+                                    }
+                                    else{
+                                        Log.e("첫부분 앞 뒤 경로가 설정이 안됨","11");
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(Call<ShowWalkRes> call, Throwable t) {
+
+                                }
+                            });
+                        }
+
+                        if(start_end_type[1].equals("WALKING")){
+                            poly_end_set=false;
+                            String[] endpoint=res.get_end_latlng();
+                            ShowWalk walkRes=retro_walk.create(ShowWalk.class);
+                            Call<ShowWalkRes> walk_call = walkRes.showWalk(tMapKey,endpoint[1],endpoint[0],endpoint[3],endpoint[2],
+                                    "start","end","WGS84GEO","WGS84GEO");
+                            walk_call.enqueue(new Callback<ShowWalkRes>() {
+                                @Override
+                                public void onResponse(Call<ShowWalkRes> call, Response<ShowWalkRes> response) {
+                                    Log.e("요청보기",response.toString());
+
+                                    ShowWalkRes res=response.body();
+                                    ArrayList<LatLng> tran_walk_guide_latlng=new ArrayList<LatLng>();
+                                    ArrayList<LatLng> tran_walk_all_latlng=new ArrayList<LatLng>();
+                                    ArrayList<String> tran_walk_guide_text=new ArrayList<String>();
+                                    for(int i=0;i<res.get_count();i++){
+                                        if(res.get_type(i).equals("Point")){
+                                            LatLng added_point=new LatLng(Double.parseDouble(res.get_point_lat(i)),Double.parseDouble(res.get_point_lng(i)));
+                                            tran_walk_guide_latlng.add(added_point);
+                                            tran_walk_guide_text.add(res.get_description(i));
+                                            tran_walk_all_latlng.add(added_point);
+                                        }
+                                        else{
+                                            for(int j=0;j<res.get_coor_count(i);j++){
+                                                String[] str_latlng=res.get_coor_lat(i,j);
+                                                LatLng added_point=new LatLng(Double.parseDouble(str_latlng[0]),Double.parseDouble(str_latlng[1]));
+                                                tran_walk_all_latlng.add(added_point);
+                                            }
+                                        }
+                                    }
+                                    // 전체 경로 쌓아놓은 것에 뒤쪽에 나머지를 붙여준다
+                                    //먼저 전체 경로 합치기, 합치기 전에 맨 뒷 포인트 제거
+                                    transit_all_latlng.remove(transit_all_latlng.size()-1);
+                                    transit_all_latlng.addAll(tran_walk_all_latlng);
+
+                                    //다음 주요 포인트 합치기
+                                    transit_guide_latlng.remove(transit_guide_latlng.size()-1);
+                                    transit_guide_latlng.addAll(tran_walk_guide_latlng);
+
+                                    //다음 텍스트 합치기
+                                    transit_guide_text.remove(transit_guide_text.size()-1);
+                                    transit_guide_text.addAll(tran_walk_guide_text);
+
+                                    //이 작업이 다 끝났으면 지도 위에 그려주기
+                                    poly_end_set=true;
+                                    if(poly_start_set&&poly_end_set){
+                                        for(int i=0;i<transit_all_latlng.size();i++){
+                                            rectOptions.add(transit_all_latlng.get(i));
+                                        }
+                                        show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
+                                        show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
+                                        staticValues.cur_poly=rectOptions;
+                                        show_Map.addPolyline(rectOptions);
+                                    }
+                                    else{
+                                        Log.e("뒷 부분 경로가 설정이 안됨","11");
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(Call<ShowWalkRes> call, Throwable t) {
+
+                                }
+                            });
                         }
 
                         bottom_distance.setText(res.get_total_distance());
@@ -321,11 +446,6 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                 else{
                                     bottom_container.addView(last_point);
                                 }
-
-                                show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
-                                show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
-                                show_Map.addPolyline(rectOptions);
-                                staticValues.cur_poly=rectOptions;
                     }
                     catch(Exception e){
                         StringWriter sw = new StringWriter();
@@ -452,6 +572,15 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
         if((staticValues.walk_guide_latlng!=null)&&(walk_guide_text!=null)&&
                 (staticValues.walk_all_latlng!=null)&&(staticValues.walk_guide_latlng.size()>3)){
             Intent intent=new Intent(show_route_activity.this,ar_activity.class);
+            intent.putExtra("type","walk");
+            staticValues.static_cur_mode="walk";
+            startActivity(intent);
+        }
+        else if((staticValues.transit_guide_latlng!=null)&&(transit_guide_text!=null)&&
+                (staticValues.transit_all_latlng!=null)&&(staticValues.transit_guide_latlng.size()>3)){
+            Intent intent=new Intent(show_route_activity.this,ar_activity.class);
+            intent.putExtra("type","transit");
+            staticValues.static_cur_mode="transit";
             startActivity(intent);
         }
         else{
