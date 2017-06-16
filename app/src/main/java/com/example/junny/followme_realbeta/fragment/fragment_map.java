@@ -21,6 +21,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
 import static com.example.junny.followme_realbeta.staticValues.middle_point;
 import static com.example.junny.followme_realbeta.staticValues.to_latlng;
+import static com.example.junny.followme_realbeta.staticValues.tourAttractions;
 
 /**
  * Created by junny on 2017. 6. 2..
@@ -51,12 +52,17 @@ public class fragment_map extends android.support.v4.app.Fragment implements OnM
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap=googleMap;
-        myPosition=mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치").icon(BitmapDescriptorFactory.fromResource(R.drawable.green_arrow)));
         mMap.addMarker(new MarkerOptions().position(to_latlng).title("도착점"));
+        myPosition=mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치"));
 
         for(int i=0;i<mActivity.cur_guide_latlng.size();i++){
             mMap.addMarker(new MarkerOptions().position(mActivity.cur_guide_latlng.get(i)).icon(BitmapDescriptorFactory.fromResource(R.drawable.pinholder)));
         }
+
+        for(int i=0;i<tourAttractions.size();i++){
+            mMap.addMarker(new MarkerOptions().position(tourAttractions.get(i).getPoint()).title(tourAttractions.get(i).getTitle()).icon(BitmapDescriptorFactory.fromResource(R.drawable.flag)));
+        }
+
         set_zoom();
         mMap.addPolyline(staticValues.cur_poly);
     }

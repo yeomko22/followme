@@ -39,6 +39,9 @@ public class NearTourRes {
         return_location.setLongitude(Double.parseDouble(attractions[i].lngi));
         return return_location;
     }
+    public String getRadius(int i){
+        return attractions[i].radi;
+    }
 
     class Attraction{
         String title;
@@ -46,15 +49,15 @@ public class NearTourRes {
         String lati;
         String lngi;
         String category;
-        String Radius;
+        String radi;
 
-        public Attraction(String title, String description, String lati, String lngi, String category, String radius) {
+        public Attraction(String title, String description, String lati, String lngi, String category, String radi) {
             this.title = title;
             this.description = description;
             this.lati = lati;
             this.lngi = lngi;
             this.category = category;
-            Radius = radius;
+            this.radi = radi;
         }
     }
 }

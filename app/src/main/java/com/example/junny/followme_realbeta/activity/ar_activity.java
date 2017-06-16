@@ -24,6 +24,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.Switch;
@@ -49,6 +50,7 @@ import java.util.ArrayList;
 
 import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
 import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
+import static com.example.junny.followme_realbeta.staticValues.tourAttractions;
 import static com.example.junny.followme_realbeta.staticValues.walk_guide_latlng;
 import static com.example.junny.followme_realbeta.staticValues.walk_guide_text;
 
@@ -97,6 +99,7 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
     SharedPreferences pref;
     SharedPreferences.Editor editor;
     private boolean is_initi=false;
+    private String cur_visible_item="nothing";
 
 
     @Override
@@ -326,13 +329,15 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
                 if(!is_initi){
                     is_initi=true;
                     initialize();
+                    //처음에는 기존의 값 사용
                 }
-
-                //인식한 내 위치로 메모리상의 변수들 변경
-                staticValues.mLastLocation=location;
-                mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
-                staticValues.mLastLat=location.getLatitude();
-                staticValues.mLastLong=location.getLongitude();
+                else{
+                    //인식한 내 위치로 메모리상의 변수들 변경
+                    staticValues.mLastLocation=location;
+                    mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
+                    staticValues.mLastLat=location.getLatitude();
+                    staticValues.mLastLong=location.getLongitude();
+                }
 
                 //다음 체크 포인트에 도착했는지를 확인, 도착했을 경우 변수들 변경
                 if(check_position(mLastLatLong)){
@@ -356,6 +361,19 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
                 //내 위치로 지도 상의 마커를 찍어준다
                 fm.myPosition.remove();
                 fm.myPosition=fm.mMap.addMarker(new MarkerOptions().position(mLastLatLong));
+
+                //근처 관광지에 도착했는지 검사 함수
+                for(int i=0;i<staticValues.tourAttractions.size();i++){
+                    Log.e("최종 결과",Float.toString(mLastLocation.distanceTo(tourAttractions.get(i).getLocation())-tourAttractions.get(i).getRadius()));
+
+                    if(mLastLocation.distanceTo(tourAttractions.get(i).getLocation())-tourAttractions.get(i).getRadius()<50){
+                        tourAttractions.get(i).setVisible(true);
+                    }
+                    else{
+                        tourAttractions.get(i).setVisible(false);
+                    }
+                }
+
                 return;
             }
             else{
@@ -499,8 +517,44 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
 
     @Override
     public void orientation(Double AZIMUTH, Double PITCH, Double ROLL) {
-        Log.e("베어링 : ", Float.toString(staticValues.last_bearing));
-        Log.e("아주미스 : ",Double.toString(AZIMUTH));
         fa.arrow.setRotation((float)(staticValues.last_bearing-(double)AZIMUTH));
+
+        for(int i=0;i<tourAttractions.size();i++){
+            if(tourAttractions.get(i).isVisible()){
+                Log.e(tourAttractions.get(i).getTitle()+" 보이는지 여부", Boolean.toString(tourAttractions.get(i).isVisible()));
+                //현재 내 위치에서 관광지까지의 베어링, 내가 바라보는 각도가 일치하는지 검사
+                float bearingTo=mLastLocation.bearingTo(tourAttractions.get(i).getLocation());
+                double visibleAngle;
+                visibleAngle=Math.abs(bearingTo-AZIMUTH)%360;
+                if(visibleAngle<30){
+                    //현재 떠있는 AR 컨텐츠가 없을 경우 보이게 변경하고 화살표 아래로 내리기
+                    if(fa.ar_content.getVisibility()==View.INVISIBLE){
+                        String[] info=tourAttractions.get(i).getExtra();
+                        cur_visible_item=tourAttractions.get(i).getTitle();
+
+                        fa.ar_content.setVisibility(View.VISIBLE);
+                        fa.ar_title.setText(info[0]);
+                        fa.ar_category.setText(info[1]);
+                        fa.ar_description.setText(info[2]);
+
+                        FrameLayout.LayoutParams mLayoutParams=(FrameLayout.LayoutParams)fa.arrow.getLayoutParams();
+                        mLayoutParams.topMargin=400;
+                        fa.arrow.setLayoutParams(mLayoutParams);
+                    }
+                    else{
+                        Log.e("이미 표시중입니다","11");
+                    }
+                }
+                else{
+                    //주변에 보이는 관광지가 없을 경우 AR 컨텐츠 지워주기
+                    if(fa.ar_content.getVisibility()==View.VISIBLE&&cur_visible_item.equals(tourAttractions.get(i).getTitle())){
+                        fa.ar_content.setVisibility(View.INVISIBLE);
+                        FrameLayout.LayoutParams mLayoutParams=(FrameLayout.LayoutParams)fa.arrow.getLayoutParams();
+                        mLayoutParams.topMargin=50;
+                        fa.arrow.setLayoutParams(mLayoutParams);
+                    }
+                }
+            }
+        }
     }
 }

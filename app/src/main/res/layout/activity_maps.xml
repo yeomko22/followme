@@ -96,6 +96,21 @@
             android:layout_height="match_parent"
             tools:context="com.example.junny.followme_realbeta.activity.MapsActivity" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/light_light_grey"
+            android:gravity="center"
+            android:padding="10dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="15dp"
+                android:textColor="@color/black"
+                android:text="좌표가 정확하지 않다면, 직접 드래그로 조절하세요"/>
+        </LinearLayout>
+
         <TextView
             android:id="@+id/loading_text"
             android:layout_height="wrap_content"
@@ -106,20 +121,6 @@
             android:textSize="20dp"
             android:lineSpacingExtra="5dp"
             android:textColor="@color/white"/>
-
-        <!--<Button-->
-            <!--android:layout_gravity="left|bottom"-->
-            <!--android:text="백그라운스 시작"-->
-            <!--android:layout_width="40dp"-->
-            <!--android:layout_height="40dp"-->
-            <!--android:onClick="back_start" />-->
-
-        <!--<Button-->
-            <!--android:layout_gravity="right|bottom"-->
-            <!--android:text="백그라운스 멈춤"-->
-            <!--android:layout_width="40dp"-->
-            <!--android:layout_height="40dp"-->
-            <!--android:onClick="back_end" />-->
 
     </FrameLayout>
 

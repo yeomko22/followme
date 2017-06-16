@@ -15,6 +15,8 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import com.example.junny.followme_realbeta.R;
 
@@ -34,6 +36,11 @@ public class fragment_ar extends android.support.v4.app.Fragment implements Surf
     private SurfaceHolder mCameraHolder;
     private Camera mCamera;
 
+    public LinearLayout ar_content;
+    public TextView ar_title;
+    public TextView ar_category;
+    public TextView ar_description;
+
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
@@ -41,6 +48,12 @@ public class fragment_ar extends android.support.v4.app.Fragment implements Surf
 
         mCameraView=(SurfaceView)view.findViewById(R.id.cameraView);
         arrow=(ImageView)view.findViewById(R.id.arrow);
+
+        ar_content=(LinearLayout)view.findViewById(R.id.ar_content);
+        ar_title=(TextView)view.findViewById(R.id.ar_title);
+        ar_category=(TextView)view.findViewById(R.id.ar_category);
+        ar_description=(TextView)view.findViewById(R.id.ar_description);
+
         init();
         return view;
     }

@@ -23,6 +23,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
@@ -312,6 +313,10 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                         show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
                                         staticValues.cur_poly=rectOptions;
                                         show_Map.addPolyline(rectOptions);
+
+                                        for(int i=0;i<staticValues.tourAttractions.size();i++){
+                                            show_Map.addMarker(new MarkerOptions().icon(BitmapDescriptorFactory.fromResource(R.drawable.flag)).position(tourAttractions.get(i).getPoint()).title(tourAttractions.get(i).getTitle()));
+                                        }
                                     }
                                     else{
                                         Log.e("첫부분 앞 뒤 경로가 설정이 안됨","11");
@@ -378,6 +383,10 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                                         show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
                                         staticValues.cur_poly=rectOptions;
                                         show_Map.addPolyline(rectOptions);
+
+                                        for(int i=0;i<staticValues.tourAttractions.size();i++){
+                                            show_Map.addMarker(new MarkerOptions().icon(BitmapDescriptorFactory.fromResource(R.drawable.flag)).position(tourAttractions.get(i).getPoint()).title(tourAttractions.get(i).getTitle()));
+                                        }
                                     }
                                     else{
                                         Log.e("뒷 부분 경로가 설정이 안됨","11");
@@ -544,6 +553,10 @@ public class show_route_activity extends FragmentActivity implements OnMapReadyC
                         staticValues.cur_poly=walkOptions;
                         show_Map.addMarker(new MarkerOptions().position(staticValues.mLastLatLong).title("내 위치"));
                         show_Map.addMarker(new MarkerOptions().position(staticValues.to_latlng).title("목표지점"));
+
+                        for(int i=0;i<staticValues.tourAttractions.size();i++){
+                            show_Map.addMarker(new MarkerOptions().icon(BitmapDescriptorFactory.fromResource(R.drawable.flag)).position(tourAttractions.get(i).getPoint()).title(tourAttractions.get(i).getTitle()));
+                        }
 
                         String walk_time=res.get_total_time();
                         int added_walk_time=Integer.parseInt(walk_time)/60;

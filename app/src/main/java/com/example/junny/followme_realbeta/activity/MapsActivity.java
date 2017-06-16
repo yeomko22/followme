@@ -313,6 +313,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         stopService(intent);
     }
 
+
     class MyLoactionListener implements LocationListener{
         @Override
         public void onLocationChanged(Location location) {
@@ -328,9 +329,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 staticValues.mLastLong=location.getLongitude();
 
                 //지도 상에 현 위치 표시
-                mMap.addMarker(new MarkerOptions().position(mLastLatLong));
-                mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치"));
+                mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치").draggable(true));
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mLastLatLong,18));
+                mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
+                    @Override
+                    public void onMarkerDragStart(Marker marker) {
+
+                    }
+
+                    @Override
+                    public void onMarkerDrag(Marker marker) {
+
+                    }
+
+                    @Override
+                    public void onMarkerDragEnd(Marker marker) {
+                        Toast.makeText(MapsActivity.this, Double.toString(marker.getPosition().latitude)+","+Double.toString(marker.getPosition().longitude),Toast.LENGTH_LONG).show();
+                    }
+                });
 
                 //잡아낸 좌표로 통신해서 주소 값 받아오기 레트로핏
                 ReverseGeo retro_geo=retrofit.create(ReverseGeo.class);
@@ -382,12 +398,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 for(int i=0;i<res.getCount();i++){
                                     //현재 위치에서 반경 10km 이내인지 검사
                                     Log.e(res.getTitle(i), Float.toString(staticValues.mLastLocation.distanceTo(res.getLocation(i))));
-                                    if(staticValues.mLastLocation.distanceTo(res.getLocation(i))<10000){
+                                    if(staticValues.mLastLocation.distanceTo(res.getLocation(i))<3000){
                                         if(staticValues.tourAttractions==null){
                                             tourAttractions=new ArrayList<TourAttraction>();
                                         }
-                                        String[] extra_info=res.getExtra(i);
-                                        tourAttractions.add(new TourAttraction(res.getPoint(i),res.getLocation(i),extra_info));
+                                        tourAttractions.add(new TourAttraction(res.getPoint(i),res.getLocation(i),res.getExtra(i),res.getRadius(i)));
                                     }
                                 }
                             }
