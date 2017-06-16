@@ -3,6 +3,7 @@ package com.example.junny.followme_realbeta;
 import android.location.Location;
 
 import com.example.junny.followme_realbeta.item.DBHelper;
+import com.example.junny.followme_realbeta.item.TourAttraction;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.maps.SupportMapFragment;
@@ -58,6 +59,9 @@ public class staticValues {
     //현재 길찾기 모드
     public static String static_cur_mode;
     public static int static_cur_point=0;
+
+    //반경 10km 이내의 관광 명소들
+    public static ArrayList<TourAttraction> tourAttractions;
 
     //api 키들
     public static final String gMapKey="AIzaSyC2KPG-dhy-IqT1iBhb6W4N3WC1od4qAN0";

@@ -26,7 +26,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.junny.followme_realbeta.R;
+import com.example.junny.followme_realbeta.interfaces.NearTour;
 import com.example.junny.followme_realbeta.interfaces.ReverseGeo;
+import com.example.junny.followme_realbeta.item.TourAttraction;
+import com.example.junny.followme_realbeta.response.NearTourRes;
 import com.example.junny.followme_realbeta.response.ReverseGeoRes;
 import com.example.junny.followme_realbeta.service.NotifyService;
 import com.example.junny.followme_realbeta.staticValues;
@@ -46,6 +49,7 @@ import com.skp.Tmap.TMapTapi;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -55,6 +59,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 import static com.example.junny.followme_realbeta.staticValues.gMapKey;
 import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
+import static com.example.junny.followme_realbeta.staticValues.tourAttractions;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -72,6 +77,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //통신 요소들
     private GoogleApiClient mGoogleApiClient;
     private Retrofit retrofit;
+    private Retrofit retrofit_neartour;
 
     //액티비티 뷰 요소들
     private TextView start_point;
@@ -101,6 +107,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //레트로핏 객체를 만들 때에 기본적인 유알엘을 정의
         retrofit=new Retrofit.Builder()
                 .baseUrl("https://maps.googleapis.com/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        //서울이면 서울 관광지 정보를 긁어와서 저장하는 역할을 한다
+        retrofit_neartour=new Retrofit.Builder()
+                .baseUrl("http://218.38.52.104/")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
 
@@ -353,6 +365,46 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     @Override
                     public void onFailure(Call<ReverseGeoRes> call, Throwable t) {
+                        Log.e("실패원인",t.toString());
+                    }
+                });
+
+                NearTour retro_neartour=retrofit_neartour.create(NearTour.class);
+                Call<NearTourRes> tour_call = retro_neartour.search_near("서울");
+                tour_call.enqueue(new Callback<NearTourRes>() {
+                    @Override
+                    public void onResponse(Call<NearTourRes> tour_call, Response<NearTourRes> response) {
+                        if(response.isSuccessful()){
+                            NearTourRes res = response.body();
+                            Log.e("요청 보기",response.toString());
+                            try{
+                                //여기서 해야할 일, 서버에서 날아온 정보를 내가 쓰기 쉽게 가공하기
+                                for(int i=0;i<res.getCount();i++){
+                                    //현재 위치에서 반경 10km 이내인지 검사
+                                    Log.e(res.getTitle(i), Float.toString(staticValues.mLastLocation.distanceTo(res.getLocation(i))));
+                                    if(staticValues.mLastLocation.distanceTo(res.getLocation(i))<10000){
+                                        if(staticValues.tourAttractions==null){
+                                            tourAttractions=new ArrayList<TourAttraction>();
+                                        }
+                                        String[] extra_info=res.getExtra(i);
+                                        tourAttractions.add(new TourAttraction(res.getPoint(i),res.getLocation(i),extra_info));
+                                    }
+                                }
+                            }
+                            catch(Exception e){
+                                StringWriter sw = new StringWriter();
+                                e.printStackTrace(new PrintWriter(sw));
+                                String exceptionAsStrting = sw.toString();
+                                Log.e("예외발생", exceptionAsStrting);
+                            }
+                        }
+                        else{
+                            Log.e("에러 메세지", response.toString());
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<NearTourRes> call, Throwable t) {
                         Log.e("실패원인",t.toString());
                     }
                 });
