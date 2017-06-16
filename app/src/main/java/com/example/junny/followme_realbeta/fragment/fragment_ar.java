@@ -40,6 +40,8 @@ public class fragment_ar extends android.support.v4.app.Fragment implements Surf
     public TextView ar_title;
     public TextView ar_category;
     public TextView ar_description;
+    public LinearLayout attractions_bar;
+    public TextView attractions_num;
 
     @Nullable
     @Override
@@ -53,6 +55,8 @@ public class fragment_ar extends android.support.v4.app.Fragment implements Surf
         ar_title=(TextView)view.findViewById(R.id.ar_title);
         ar_category=(TextView)view.findViewById(R.id.ar_category);
         ar_description=(TextView)view.findViewById(R.id.ar_description);
+        attractions_bar=(LinearLayout)view.findViewById(R.id.attractions_bar);
+        attractions_num=(TextView)view.findViewById(R.id.attractions_num);
 
         init();
         return view;

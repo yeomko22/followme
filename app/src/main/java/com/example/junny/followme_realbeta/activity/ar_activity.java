@@ -198,9 +198,18 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if(isChecked){
                     editor.putString("setting_tour","on");
+                    if(tourAttractions!=null&&tourAttractions.size()>0){
+                        fa.attractions_bar.setVisibility(View.VISIBLE);
+                        fa.attractions_num.setText("주변에 관광명소가 "+Integer.toString(tourAttractions.size())+"군데 있습니다");
+                    }
+
                 }
                 else{
                     editor.putString("setting_tour","off");
+                    if(fa.attractions_bar.getVisibility()==View.VISIBLE){
+                        fa.attractions_bar.setVisibility(View.INVISIBLE);
+                    }
+
                 }
                 editor.commit();
             }
@@ -212,7 +221,6 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
                     editor.putString("setting_tourAR","on");
                 }
                 else{
-                    Toast.makeText(ar_activity.this, "투어ar 꺼짐", Toast.LENGTH_LONG).show();
                     editor.putString("setting_tourAR","off");
                 }
                 editor.commit();
@@ -298,6 +306,10 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
         ar_destination=(TextView)findViewById(R.id.ar_destination);
         ar_destination.setText(staticValues.to_title);
         ar_distance=(TextView)findViewById(R.id.ar_distance);
+        if(pref.getString("setting_tour","").equals("on")&&tourAttractions!=null&&tourAttractions.size()>0){
+            fa.attractions_bar.setVisibility(View.VISIBLE);
+            fa.attractions_num.setText("주변에 관광명소가 "+Integer.toString(tourAttractions.size())+"군데 있습니다");
+        }
 
         if(staticValues.distance>1000){
             ar_distance.setText(String.format("%.2f",staticValues.distance/1000.f)+"km");
@@ -326,28 +338,24 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
             if(cur_accuracy>0&&cur_accuracy<=25){
                 Log.e("유효","11");
                 //초기화 함수를 여기서 호출하는 이유는 유효한 정보를 제공하기 위해서는 처음에 GPS를 잡아내야만 하기 때문
-                if(!is_initi){
-                    is_initi=true;
-                    initialize();
-                    //처음에는 기존의 값 사용
-                }
-                else{
-                    //인식한 내 위치로 메모리상의 변수들 변경
-                    staticValues.mLastLocation=location;
-                    mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
-                    staticValues.mLastLat=location.getLatitude();
-                    staticValues.mLastLong=location.getLongitude();
-                }
+
+                staticValues.mLastLocation=location;
+                mLastLatLong=new LatLng(location.getLatitude(),location.getLongitude());
+                staticValues.mLastLat=location.getLatitude();
+                staticValues.mLastLong=location.getLongitude();
 
                 //다음 체크 포인트에 도착했는지를 확인, 도착했을 경우 변수들 변경
                 if(check_position(mLastLatLong)){
+                    if(!is_initi){
+                        is_initi=true;
+                        initialize();
+                        //처음에는 기존의 값 사용
+                    }
+
                     guide_num.setText(Integer.toString(cur_point));
                     guide_text.setText(cur_guide_text.get(cur_point-1));
                     if(pref.getString("setting_fore_vibe","").equals("on")){
                         mVibe.vibrate(500);
-                    }
-                    else{
-                        Toast.makeText(ar_activity.this, "진동 꺼짐",Toast.LENGTH_LONG).show();
                     }
                 }
                 if(staticValues.distance>1000){
@@ -357,6 +365,10 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
                 else{
                     ar_distance.setText(String.format("%.2f",staticValues.distance)+"m");
                 }
+                if(pref.getString("setting_tour","").equals("on")&&tourAttractions!=null&&tourAttractions.size()>0){
+                    fa.attractions_bar.setVisibility(View.VISIBLE);
+                    fa.attractions_num.setText("주변에 관광명소가 "+Integer.toString(tourAttractions.size())+"군데 있습니다");
+                }
 
                 //내 위치로 지도 상의 마커를 찍어준다
                 fm.myPosition.remove();
@@ -364,7 +376,7 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
 
                 //근처 관광지에 도착했는지 검사 함수
                 for(int i=0;i<staticValues.tourAttractions.size();i++){
-                    Log.e("최종 결과",Float.toString(mLastLocation.distanceTo(tourAttractions.get(i).getLocation())-tourAttractions.get(i).getRadius()));
+//                    Log.e("최종 결과",Float.toString(mLastLocation.distanceTo(tourAttractions.get(i).getLocation())-tourAttractions.get(i).getRadius()));
 
                     if(mLastLocation.distanceTo(tourAttractions.get(i).getLocation())-tourAttractions.get(i).getRadius()<50){
                         tourAttractions.get(i).setVisible(true);
@@ -521,7 +533,7 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
 
         for(int i=0;i<tourAttractions.size();i++){
             if(tourAttractions.get(i).isVisible()){
-                Log.e(tourAttractions.get(i).getTitle()+" 보이는지 여부", Boolean.toString(tourAttractions.get(i).isVisible()));
+//                Log.e(tourAttractions.get(i).getTitle()+" 보이는지 여부", Boolean.toString(tourAttractions.get(i).isVisible()));
                 //현재 내 위치에서 관광지까지의 베어링, 내가 바라보는 각도가 일치하는지 검사
                 float bearingTo=mLastLocation.bearingTo(tourAttractions.get(i).getLocation());
                 double visibleAngle;
@@ -529,6 +541,12 @@ public class ar_activity extends FragmentActivity implements GoogleApiClient.Con
                 if(visibleAngle<30){
                     //현재 떠있는 AR 컨텐츠가 없을 경우 보이게 변경하고 화살표 아래로 내리기
                     if(fa.ar_content.getVisibility()==View.INVISIBLE){
+                        if(pref.getString("setting_tourAR","").equals("off")){
+                            return;
+                        }
+                        if(pref.getString("setting_back_vibe","").equals("on")){
+                            mVibe.vibrate(500);
+                        }
                         String[] info=tourAttractions.get(i).getExtra();
                         cur_visible_item=tourAttractions.get(i).getTitle();
 

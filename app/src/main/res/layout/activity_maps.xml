@@ -97,6 +97,8 @@
             tools:context="com.example.junny.followme_realbeta.activity.MapsActivity" />
 
         <LinearLayout
+            android:visibility="invisible"
+            android:id="@+id/drag_guide"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@color/light_light_grey"
@@ -107,7 +109,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="15dp"
-                android:textColor="@color/black"
                 android:text="좌표가 정확하지 않다면, 직접 드래그로 조절하세요"/>
         </LinearLayout>
 

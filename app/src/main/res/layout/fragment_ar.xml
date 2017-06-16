@@ -77,10 +77,47 @@
         android:layout_margin="50dp"
         android:id="@+id/arrow"
         android:src="@drawable/navigation_right" />
-    <Button
-        android:layout_width="wrap_content"
+    <!--<Button-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:layout_gravity="bottom|right"-->
+        <!--android:text="갈림길 도착"-->
+        <!--android:onClick="next_checkpoint"/>-->
+    <LinearLayout
+        android:id="@+id/attractions_bar"
+        android:visibility="invisible"
+        android:layout_gravity="bottom"
+        android:gravity="center_horizontal|center_vertical"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|right"
-        android:text="갈림길 도착"
-        android:onClick="next_checkpoint"/>
+        android:paddingLeft="10dp"
+        android:background="@color/light_light_grey">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="30dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:layout_gravity="center"
+                android:layout_height="20dp"
+                android:layout_width="20dp"
+                android:src="@drawable/sniper"/>
+            <TextView
+                android:id="@+id/attractions_num"
+                android:layout_marginLeft="10dp"
+                android:gravity="center_vertical"
+                android:layout_gravity="bottom"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="주변에 관광 명소가 있습니다"
+                android:textSize="18dp"
+                android:textColor="@color/black"/>
+        </LinearLayout>
+
+
+
+    </LinearLayout>
 </FrameLayout>

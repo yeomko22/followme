@@ -71,14 +71,15 @@
                 android:id="@+id/view_pager"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="7.5">
+                android:layout_weight="7.75">
 
             </android.support.v4.view.ViewPager>
+
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1.5"
+                android:layout_weight="1.25"
                 android:orientation="horizontal"
                 android:weightSum="10">
 
@@ -88,7 +89,9 @@
                     android:layout_height="match_parent"
                     android:layout_weight="8.5"
                     android:orientation="vertical"
-                    android:padding="10dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:paddingLeft="15dp"
                     android:weightSum="2">
 
                     <LinearLayout
@@ -102,7 +105,7 @@
                             android:layout_height="wrap_content"
                             android:text="도착지 : "
                             android:textColor="@color/black"
-                            android:textSize="20dp" />
+                            android:textSize="18dp" />
 
                         <TextView
                             android:id="@+id/ar_destination"
@@ -110,7 +113,7 @@
                             android:layout_height="wrap_content"
                             android:text="예상 도착지"
                             android:textColor="@color/black"
-                            android:textSize="20dp" />
+                            android:textSize="18dp" />
 
                     </LinearLayout>
 
@@ -125,7 +128,7 @@
                             android:layout_height="wrap_content"
                             android:text="남은 거리 : "
                             android:textColor="@color/black"
-                            android:textSize="20dp" />
+                            android:textSize="18dp" />
 
                         <TextView
                             android:id="@+id/ar_distance"
@@ -133,7 +136,7 @@
                             android:layout_height="wrap_content"
                             android:text="예상 남은 거리"
                             android:textColor="@color/black"
-                            android:textSize="20dp" />
+                            android:textSize="18dp" />
 
                     </LinearLayout>
 
@@ -274,12 +277,12 @@
             android:paddingRight="10dp">
 
             <Switch
-                android:id="@+id/switch_back_vibe"
+                android:id="@+id/switch_tour"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_gravity="left"
                 android:textSize="15dp"
-                android:text="푸쉬 알림 진동"/>
+                android:text="관광 명소 알림"/>
 
         </LinearLayout>
 
@@ -292,14 +295,16 @@
             android:paddingRight="10dp">
 
             <Switch
-                android:id="@+id/switch_tour"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_gravity="left"
-                android:textSize="15dp"
-                android:text="관광 명소 알림"/>
+            android:id="@+id/switch_back_vibe"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="left"
+            android:textSize="15dp"
+            android:text="관광 명소 진동"/>
 
         </LinearLayout>
+
+
 
         <LinearLayout
             android:layout_width="match_parent"

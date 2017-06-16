@@ -22,6 +22,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -58,7 +59,10 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 import static com.example.junny.followme_realbeta.staticValues.gMapKey;
+import static com.example.junny.followme_realbeta.staticValues.mLastLat;
 import static com.example.junny.followme_realbeta.staticValues.mLastLatLong;
+import static com.example.junny.followme_realbeta.staticValues.mLastLocation;
+import static com.example.junny.followme_realbeta.staticValues.mLastLong;
 import static com.example.junny.followme_realbeta.staticValues.tourAttractions;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
@@ -67,7 +71,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //구글 맵 변수들
     private GoogleMap mMap;
     private Geocoder geocoder;
-    private Marker mMarker;
+    private Marker myMarker;
 
     //구글 장소 리퀘스트 변수들
     private MyLoactionListener myLocationListener;
@@ -81,6 +85,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //액티비티 뷰 요소들
     private TextView start_point;
+    private LinearLayout guide_drag;
+    private Animation anim;
+    private Marker mMarker;
 
     //네트워크, GPS 사용 가능 여부 확인 변수들
     private boolean isGPSEnable=false;
@@ -100,6 +107,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         conn_manager=(ConnectivityManager)MapsActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
         locationManager=(LocationManager)MapsActivity.this.getSystemService(Context.LOCATION_SERVICE);
         start_point=(TextView)findViewById(R.id.start_point);
+        guide_drag=(LinearLayout) findViewById(R.id.drag_guide);
 
         staticValues.mapFragment=(SupportMapFragment)getSupportFragmentManager().findFragmentById(R.id.map);
         staticValues.mapFragment.getMapAsync(this);
@@ -267,7 +275,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         //환경설정 성공시 작동
-        Animation anim = AnimationUtils.loadAnimation(getApplicationContext(),R.anim.rotate);
+        anim = AnimationUtils.loadAnimation(getApplicationContext(),R.anim.rotate);
         v.startAnimation(anim);
 
         if(ContextCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
@@ -321,6 +329,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             Log.e("정확도",Float.toString(cur_accuracy));
             if(cur_accuracy>0&&cur_accuracy<=25){
                 Log.e("유효","11");
+                guide_drag.setVisibility(View.VISIBLE);
+                if(anim!=null){
+                    anim.cancel();
+                    anim.reset();
+                }
 
                 //잡아낸 변수 스태틱에 전달
                 staticValues.mLastLocation=location;
@@ -328,13 +341,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 staticValues.mLastLat=location.getLatitude();
                 staticValues.mLastLong=location.getLongitude();
 
-                //지도 상에 현 위치 표시
-                mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치").draggable(true));
+                //원래 위치를 지워주고 지도 상에 현 위치 표시
+                if(myMarker!=null){
+                    myMarker.remove();
+                }
+                myMarker=mMap.addMarker(new MarkerOptions().position(mLastLatLong).title("내 위치").draggable(true));
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mLastLatLong,18));
                 mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
                     @Override
                     public void onMarkerDragStart(Marker marker) {
-
+                        guide_drag.setVisibility(View.INVISIBLE);
                     }
 
                     @Override
@@ -344,7 +360,51 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     @Override
                     public void onMarkerDragEnd(Marker marker) {
-                        Toast.makeText(MapsActivity.this, Double.toString(marker.getPosition().latitude)+","+Double.toString(marker.getPosition().longitude),Toast.LENGTH_LONG).show();
+                        //사용자가 드래그한 위치로 메모리 상의 내 좌표 옮겨주기
+                        double lati=marker.getPosition().latitude;
+                        double lngi=marker.getPosition().longitude;
+                        mLastLatLong=new LatLng(lati,lngi);
+                        mLastLat=lati;
+                        mLastLong=lngi;
+                        mLastLocation=new Location("custom_location");
+                        mLastLocation.setLatitude(lati);
+                        mLastLocation.setLongitude(lngi);
+
+                        ReverseGeo retro_geo=retrofit.create(ReverseGeo.class);
+                        Call<ReverseGeoRes> call = retro_geo.reverseGeo(gMapKey,"ko",Double.toString(staticValues.mLastLat)+","+Double.toString(staticValues.mLastLong));
+                        call.enqueue(new Callback<ReverseGeoRes>() {
+                            @Override
+                            public void onResponse(Call<ReverseGeoRes> call, Response<ReverseGeoRes> response) {
+                                if(response.isSuccessful()){
+                                    ReverseGeoRes res = response.body();
+                                    Log.e("요청 보기",response.toString());
+                                    try{
+                                        String cur_address=res.getAddress();
+                                        cur_address=cur_address.replace("대한민국", "");
+                                        if(cur_address.contains("서울특별시")){
+                                            cur_address=cur_address.replace("서울특별시","");
+                                        }
+                                        cur_address=cur_address.trim();
+                                        start_point.setText(cur_address);
+                                        staticValues.cur_address=cur_address;
+                                    }
+                                    catch(Exception e){
+                                        StringWriter sw = new StringWriter();
+                                        e.printStackTrace(new PrintWriter(sw));
+                                        String exceptionAsStrting = sw.toString();
+                                        Log.e("예외발생", exceptionAsStrting);
+                                    }
+                                }
+                                else{
+                                    Log.e("에러 메세지", response.toString());
+                                }
+                            }
+
+                            @Override
+                            public void onFailure(Call<ReverseGeoRes> call, Throwable t) {
+                                Log.e("실패원인",t.toString());
+                            }
+                        });
                     }
                 });
 
